@@ -1,12 +1,6 @@
-const {
-    Transaction,
-    privateKeyToAddress
-} = require('./idena/script.js'),
-    axios = require('axios'),
-    fs = require("fs"),
+const fs = require("fs"),
     mysql = require('mysql2');
 require('dotenv').config();
-
 
 async function createDb() {
     const db = fs.readFileSync('./db.sql', "utf-8");
@@ -33,29 +27,6 @@ async function createDb() {
 
     }
     con.destroy();
-
 }
 
-
-async function setNonce() {
-    try {
-        let apiResp = await axios.post(process.env.IDENA_PROVIDER, {
-            "method": "dna_getBalance",
-            "id": 1,
-            "key": process.env.IDENA_API_KEY,
-            "params": [privateKeyToAddress(process.env.IDENA_PRIVATE_KEY)]
-        })
-
-        fs.writeFileSync("./idena/nonce.json", JSON.stringify({
-            nonce: apiResp.data.result.nonce
-        }), "utf8")
-        console.log("the idena local nonce has has been set");
-    } catch (error) {
-        console.log("error while trying to set the idena local nonce");
-    }
-}
-
-
-
-setNonce()
 createDb()
