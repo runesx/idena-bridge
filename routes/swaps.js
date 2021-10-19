@@ -13,8 +13,18 @@ const logger = require('../logger').child({
     component: "api"
 })
 
+router.get('/', async function (req, res) {
+    try {
+        console.log('latest');
+    } catch (error) {
+        logger.error(`Failed ${req.path}: ${error}`)
+        res.sendStatus(500)
+    }
+});
+
 router.get('/latest', async function (req, res) {
     try {
+        console.log('latest');
         await latest(req, res)
     } catch (error) {
         logger.error(`Failed ${req.path}: ${error}`)
@@ -158,6 +168,7 @@ async function assign(req, res) {
 
 router.post('/create', async function (req, res) {
     try {
+        console.log('create');
         await create(req, res)
     } catch (error) {
         logger.error(`Failed ${req.path} (type=${req.body.type}, amount=${req.body.amount}, address=${req.body.address}): ${error}`)
@@ -166,11 +177,17 @@ router.post('/create', async function (req, res) {
 });
 
 async function create(req, res) {
-    const reqInfo = `${req.path} (type=${req.body.type}, amount=${req.body.amount}, address=${req.body.address})`
+    const reqInfo = `${req.path} (type=${req.body.type}, amount=${req.body.amount}, address=${req.body.address})`;
+    console.log(reqInfo);
     logger.debug(`Got ${reqInfo}`)
     let type = parseInt(req.body.type);
     let amount = parseFloat(req.body.amount);
     if (!utils.isAddress(req.body.address) || (type !== 0 && type !== 1) || !(amount >= process.env.MIN_SWAP)) {
+        console.log('bad request');
+        console.log(utils.isAddress(req.body.address));
+        console.log(type);
+        console.log(amount);
+        console.log(process.env.MIN_SWAP);
         logger.debug(`Bad request ${reqInfo}`)
         res.sendStatus(400);
         return

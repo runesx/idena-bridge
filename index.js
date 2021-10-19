@@ -8,7 +8,7 @@ const express = require('express'),
 
 const logger = require('./logger').child({component: "processing"})
 logger.info('Idena bridge started')
-console.log('Idena bridge started')
+console.log('Runes bridge started')
 
 db = mysql.createPool({
     host: process.env.DB_HOST,
@@ -162,12 +162,13 @@ async function loopCheckSwaps() {
 const swaps = require('./routes/swaps');
 app.use(cors())
 app.use(bodyParser.json());
-app.use('/swaps', swaps);
+app.use('/', swaps);
 
 async function start() {
-    await idena.initNonce()
+    //await idena.initNonce()
     loopCheckSwaps();
     const port = 8000;
+    console.log("startup");
     app.listen(port, () => logger.info(`Server started, listening on port: ${port}`));
 }
 
