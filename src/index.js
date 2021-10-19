@@ -8,8 +8,8 @@ const express = require('express'),
     const db = require('./models');
     const { Sequelize, Transaction, Op } = require('sequelize');
 const logger = require('./logger').child({component: "processing"})
-logger.info('Idena bridge started')
-console.log('Runes bridge started')
+logger.info('RUNES bridge started')
+console.log('RUNES bridge started')
 const swaps = require('./routes/swaps');
 
 async function handleIdenaToBscSwap(swap, conP, logger) {

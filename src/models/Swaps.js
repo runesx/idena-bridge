@@ -11,6 +11,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING(42),
         allowNull: true,
       },
+      depositAddress: {
+        type: DataTypes.STRING(42),
+        allowNull: true,
+      },
       amount: {
         type: DataTypes.DECIMAL(36, 18),
         allowNull: true,
