@@ -5,18 +5,12 @@ const express = require('express'),
     bodyParser = require('body-parser'),
     idena = require('./idena'),
     bsc = require('./bsc');
-    const dbNew = require('./models');
+    const db = require('./models');
+    const { Sequelize, Transaction, Op } = require('sequelize');
 const logger = require('./logger').child({component: "processing"})
 logger.info('Idena bridge started')
 console.log('Runes bridge started')
 const swaps = require('./routes/swaps');
-const db = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USERNAME,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME,
-    timezone: 'UTC'
-});
 
 async function handleIdenaToBscSwap(swap, conP, logger) {
     console.log('handleIdenaToBscSwap');
@@ -134,30 +128,34 @@ async function handleSwap(swap, conP, logger) {
 }
 
 async function checkSwaps() {
-    //logger.trace("Starting to check swaps");
-    let conP = db.promise();
-    let sql = "SELECT * FROM `swaps` WHERE `status` = 'Pending';";
-    let data
-    try {
-        [data] = await conP.execute(sql);
-    } catch (error) {
-        logger.error(`Failed to load pending swaps: ${error}`);
-        return
-    }
-    if (!data.length) {
-        return
-    }
-    //console.log(`Starting to handle pending swaps, cnt: ${data.length}`)
-    logger.trace(`Starting to handle pending swaps, cnt: ${data.length}`)
-    for (let swap of data) {
-        const swapLogger = logger.child({swapId: swap.uuid})
-        try {
-            //console.log('before handleswap');
-            await handleSwap(swap, conP, swapLogger)
-        } catch (error) {
-            swapLogger.error(`Failed to handle swap: ${error}`);
+    await db.sequelize.transaction({
+        isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+      }, async (t) => {
+        const pending = await db.swaps.findAll({
+            where: {
+              status: 'pending',
+            },
+          });
+        if (!pending.length) {
+            return;
         }
-    }
+        for (let swap of data) {
+            const swapLogger = logger.child({swapId: swap.uuid})
+            try {
+                //console.log('before handleswap');
+                await handleSwap(swap, conP, swapLogger)
+            } catch (error) {
+                swapLogger.error(`Failed to handle swap: ${error}`);
+            }
+        }
+
+        t.afterCommit(() => {
+          //next();
+        });
+      }).catch((err) => {
+        console.log(err.message);
+        logger.error(`Failed to load pending swaps: ${err.message}`);
+      });
 }
 
 async function loopCheckSwaps() {
