@@ -37,6 +37,7 @@ exports.mint = async function (address, amount) {
 }
 
 exports.isValidBurnTx = async function (txHash, address, amount, date) {
+    console.log('isvalidBurnTX');
     function extractDestAddress(inputData) {
         try {
             if (!inputData) {
@@ -62,6 +63,8 @@ exports.isValidBurnTx = async function (txHash, address, amount, date) {
         );
 
         let txReceipt = await provider.getTransactionReceipt(txHash);
+        console.log('txReceipt');
+        console.log(txReceipt);
 
         if (txReceipt.status !== 1) {
             logger.info(`Wrong status, actual: ${txReceipt.status}, expected: 1`);
