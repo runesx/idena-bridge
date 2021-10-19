@@ -3,6 +3,8 @@ const express = require('express'),
 const uuid = require('uuid');
 const idena = require('../idena');
 const { Rweb3 } = require('rweb3');
+const db = require('../models');
+    const { Sequelize, Transaction, Op } = require('sequelize');
 const bsc = require('../bsc');
 const {
     utils
@@ -28,19 +30,31 @@ router.get('/latest', async function (req, res) {
 
 async function latest(req, res) {
     const reqInfo = req.path
-    logger.debug(`Got ${reqInfo}`)
-    let sql = "SELECT `address`,`type`,`amount`,`status`,`time` FROM `swaps` ORDER BY time DESC LIMIT 50;";
-    db.query(sql, function (error, result, fields) {
-        if (error) {
-            logger.error(`Failed ${reqInfo}: ${error}`)
-            res.sendStatus(500)
-            return
-        }
+    logger.debug(`Got ${reqInfo}`);
+    const result = await db.swaps.findAll({
+        where: {
+          userId: req.user.id,
+        },
+        limit: 50,
+        order: [['time', 'DESC']],
+        attributes: [
+            'address',
+            'depositAddress',
+            'type',
+            'amount',
+            'status',
+            'time',
+        ],
+      });
+    if (result.length) {
         logger.debug(`Completed ${reqInfo}`)
         res.status(200).json({
-            result: result
-        })
-    })
+            result,
+        });
+        return;
+    }
+    res.sendStatus(500);
+    return;
 }
 
 router.get('/info/:uuid', async function (req, res) {
@@ -60,23 +74,22 @@ async function info(req, res) {
         res.sendStatus(400);
         return
     }
-    let sql = "SELECT * FROM `swaps` WHERE `uuid` = ? LIMIT 1;";
-    db.promise().execute(sql, [req.params.uuid])
-        .then(([data, fields]) => {
-            if (!data[0]) {
-                logger.debug(`Not found ${reqInfo}`)
-                res.sendStatus(404);
-                return
-            }
-            logger.debug(`Completed ${reqInfo}`)
-            res.status(200).json({
-                result: data[0]
-            })
+    const result = await db.swaps.findOne({
+        where: {
+            uuid: req.params.uuid,
+        }
+    })
+    if (!result) {
+        logger.debug(`Not found ${reqInfo}`)
+        res.sendStatus(404);
+                return;
+    }
+    if (result) {
+        logger.debug(`Completed ${reqInfo}`)
+        res.status(200).json({
+            result
         })
-        .catch(err => {
-            logger.error(`Failed ${reqInfo}: ${err}`)
-            res.sendStatus(500);
-        });
+    }
 }
 
 router.post('/assign', async function (req, res) {
@@ -181,6 +194,9 @@ async function isConnected() {
   async function isRunebaseAddress(address) {
     return await rweb3.utils.isRunebaseAddress(address);
   }
+  async function getNewAddress() {
+    return await rweb3.getNewAddress();
+  }
 
 async function create(req, res) {
     const isItConnected = await isConnected();
@@ -194,9 +210,21 @@ async function create(req, res) {
     logger.debug(`Got ${reqInfo}`);
     console.log('type:');
     let type = parseInt(req.body.type);
+    console.log(type);
     let amount = parseFloat(req.body.amount);
+    let RunebaseAddress;
     
+    if (type === 0) {
+        RunebaseAddress = await getNewAddress();
+        console.log(RunebaseAddress);
+    }
 
+    if (type === 0 && !RunebaseAddress) {
+        console.log(`Unable to generate Runebase Address ${reqInfo}`);
+        logger.debug(`Unable to generate Runebase Address  ${reqInfo}`);
+        res.sendStatus(400);
+        return;
+    }
 
     if (!isRunebaseAddress(req.body.address) && type === 0) {
         console.log(`Invalid Runebase Address ${reqInfo}`);
@@ -214,36 +242,39 @@ async function create(req, res) {
 
     if ((type !== 0 && type !== 1) || !(amount >= process.env.MIN_SWAP)) {
         console.log('bad request');
-        console.log(utils.isAddress(req.body.address));
-        console.log(type);
-        console.log(amount);
-        console.log(process.env.MIN_SWAP);
         logger.debug(`Bad request ${reqInfo}`)
         res.sendStatus(400);
         return
     }
     console.log('insert swap');
     let newUUID = uuid.v4();
-    let sql = "INSERT INTO `swaps`(`uuid`,`amount`,`address`,`type`) VALUES (?,?,?,?)";
-    let values = [
-        newUUID,
-        amount.toFixed(8),
-        req.body.address,
-        type
-    ];
-    db.execute(sql, values, function (err, data, fields) {
-        if (err) {
-            logger.error(`Failed to handle request '/create': ${err}`)
-            res.sendStatus(500)
-            return
-        }
-        logger.debug(`Completed ${reqInfo}: ${newUUID}`)
-        res.status(200).json({
-            result: {
-                "uuid": newUUID
-            }
-        })
-    })
+    await db.sequelize.transaction({
+        isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+      }, async (t) => {
+        const activity = await db.swaps.create({
+            uuid: newUUID,
+            amount: amount.toFixed(8),
+            address: req.body.address,
+            depositAddress: type === 0 && RunebaseAddress ? RunebaseAddress : null,
+            type,
+          }, {
+            transaction: t,
+            lock: t.LOCK.UPDATE,
+          });
+        t.afterCommit(() => {
+            logger.debug(`Completed ${reqInfo}: ${newUUID}`)
+            res.status(200).json({
+                result: {
+                    "uuid": newUUID,
+                }
+            });
+        });
+      }).catch((err) => {
+        console.log(`Failed to handle request '/create': ${err.message}`)
+        logger.error(`Failed to handle request '/create': ${err.message}`)
+        res.sendStatus(500);
+        return;
+      });
 }
 
 router.get('/calculateFees/:uuid', async function (req, res) {
