@@ -179,6 +179,7 @@ async function assign(req, res) {
 }
 
 router.post('/create', async function (req, res) {
+    console.log(req.body);
     try {
         console.log('create');
         await create(req, res)
@@ -205,7 +206,7 @@ async function create(req, res) {
         res.sendStatus(400);
         return;
     }
-    const reqInfo = `${req.path} (type=${req.body.type}, amount=${req.body.amount}, address=${req.body.address})`;
+    const reqInfo = `${req.path} (type=${req.body.type}, address=${req.body.destinationAddress})`;
     console.log(reqInfo);
     logger.debug(`Got ${reqInfo}`);
     console.log('type:');
@@ -222,30 +223,42 @@ async function create(req, res) {
     if (type === 0 && !RunebaseAddress) {
         console.log(`Unable to generate Runebase Address ${reqInfo}`);
         logger.debug(`Unable to generate Runebase Address  ${reqInfo}`);
-        res.sendStatus(400);
+        res.status(500).send({
+            error: 'Unable to generate Runebase Address',
+          });
         return;
     }
 
-    if (!isRunebaseAddress(req.body.address) && type === 0) {
+    if (!isRunebaseAddress(req.body.destinationAddress) && type === 1) {
         console.log(`Invalid Runebase Address ${reqInfo}`);
         logger.debug(`Invalid Runebase Address ${reqInfo}`);
-        res.sendStatus(400);
+        res.status(500).send({
+            error: 'Invalid Runebase Address',
+          });
         return;
     }
+    console.log('check1');
+    console.log(req.body.destinationAddress);
+    console.log(type);
 
-    if (!utils.isAddress(req.body.address) && type === 1) {
+    if (!utils.isAddress(req.body.destinationAddress) && type === 0) {
         console.log(`Invalid BSC Address ${reqInfo}`);
         logger.debug(`Invalid BSC Address ${reqInfo}`);
-        res.sendStatus(400);
+        res.status(500).send({
+            error: 'Invalid BSC Address',
+          });
         return;
     }
 
-    if ((type !== 0 && type !== 1) || !(amount >= process.env.MIN_SWAP)) {
+    if (type !== 0 && !(amount >= process.env.MIN_SWAP)) {
         console.log('bad request');
         logger.debug(`Bad request ${reqInfo}`)
-        res.sendStatus(400);
+        res.status(500).send({
+            error: 'Invalid Amount',
+          });
         return
     }
+
     console.log('insert swap');
     let newUUID = uuid.v4();
     await db.sequelize.transaction({
@@ -254,7 +267,7 @@ async function create(req, res) {
         const activity = await db.swaps.create({
             uuid: newUUID,
             amount: amount.toFixed(8),
-            address: req.body.address,
+            address: req.body.destinationAddress,
             depositAddress: type === 0 && RunebaseAddress ? RunebaseAddress : null,
             type,
           }, {
