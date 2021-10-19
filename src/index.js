@@ -5,12 +5,12 @@ const express = require('express'),
     bodyParser = require('body-parser'),
     idena = require('./idena'),
     bsc = require('./bsc');
-
+    const dbNew = require('./models');
 const logger = require('./logger').child({component: "processing"})
 logger.info('Idena bridge started')
 console.log('Runes bridge started')
-
-db = mysql.createPool({
+const swaps = require('./routes/swaps');
+const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USERNAME,
     password: process.env.DB_PASS,
@@ -19,6 +19,7 @@ db = mysql.createPool({
 });
 
 async function handleIdenaToBscSwap(swap, conP, logger) {
+    console.log('handleIdenaToBscSwap');
     if (!await idena.isTxExist(swap.idena_tx)) {
         let date = new Date(swap.time);
         date.setDate(date.getDate() + 1);
@@ -110,12 +111,15 @@ async function handleBscToIdenaSwap(swap, conP, logger) {
 }
 
 async function handleSwap(swap, conP, logger) {
+    //console.log(swap);
     if (swap.type === 0 && swap.idena_tx) {
+        console.log('RUNES TO WRUNES');
         await handleIdenaToBscSwap(swap, conP, logger)
         return
     }
 
     if (swap.type === 1 && swap.bsc_tx) {
+        console.log('WRUNES TO RUNES');
         await handleBscToIdenaSwap(swap, conP, logger)
         return
     }
@@ -130,7 +134,7 @@ async function handleSwap(swap, conP, logger) {
 }
 
 async function checkSwaps() {
-    logger.trace("Starting to check swaps")
+    //logger.trace("Starting to check swaps");
     let conP = db.promise();
     let sql = "SELECT * FROM `swaps` WHERE `status` = 'Pending';";
     let data
@@ -143,10 +147,12 @@ async function checkSwaps() {
     if (!data.length) {
         return
     }
+    //console.log(`Starting to handle pending swaps, cnt: ${data.length}`)
     logger.trace(`Starting to handle pending swaps, cnt: ${data.length}`)
-    for (swap of data) {
+    for (let swap of data) {
         const swapLogger = logger.child({swapId: swap.uuid})
         try {
+            //console.log('before handleswap');
             await handleSwap(swap, conP, swapLogger)
         } catch (error) {
             swapLogger.error(`Failed to handle swap: ${error}`);
@@ -155,11 +161,12 @@ async function checkSwaps() {
 }
 
 async function loopCheckSwaps() {
+    //console.log('loopcheckswapsstart');
     await checkSwaps();
     setTimeout(loopCheckSwaps, parseInt(process.env.CHECKING_DELAY));
 }
 
-const swaps = require('./routes/swaps');
+
 app.use(cors())
 app.use(bodyParser.json());
 app.use('/', swaps);

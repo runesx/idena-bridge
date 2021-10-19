@@ -1,8 +1,7 @@
 {
-  "name": "idena-bridge",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "runes-bridge",
+  "version": "0.0.1",
+  "description": "Bridge for RUNES <-> wRUNES",
   "dependencies": {
     "axios": "^0.21.1",
     "cors": "^2.8.5",
@@ -14,14 +13,33 @@
     "js-sha3": "^0.8.0",
     "mysql2": "^2.2.5",
     "nconf": "^0.11.1",
+    "p-queue": "^6.6.2",
     "pino": "^6.11.1",
+    "rweb3": "github:runebase/rweb3.js#1.2.4",
     "secp256k1": "^4.0.2",
+    "sequelize": "^6.7.0",
     "uuid": "^8.3.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "@babel/cli": "^7.15.7",
+    "@babel/core": "^7.15.8",
+    "@babel/node": "^7.15.8",
+    "@babel/plugin-proposal-async-generator-functions": "^7.15.8",
+    "@babel/preset-env": "^7.15.8",
+    "eslint": "^8.0.1",
+    "eslint-config-airbnb": "^18.2.1",
+    "eslint-plugin-import": "^2.25.2",
+    "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-react": "^7.26.1",
+    "eslint-plugin-security": "^1.4.0",
+    "sequelize-cli": "^6.2.0"
+  },
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon --exec babel-node --max-old-space-size=8192 src/index.js",
+    "build": "rm -rf dist && babel src --out-dir dist",
+    "start": "NODE_ENV=production PORT=3333 pm2 start dist/index.js",
+    "lint": "eslint src",
+    "db:makemigrations": "./node_modules/sequelize-auto-migrations/bin/makemigration.js"
   },
   "keywords": [
     "idena",

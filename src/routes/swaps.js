@@ -2,6 +2,7 @@ const express = require('express'),
     router = express.Router();
 const uuid = require('uuid');
 const idena = require('../idena');
+const { Rweb3 } = require('rweb3');
 const bsc = require('../bsc');
 const {
     utils
@@ -12,15 +13,8 @@ const {
 const logger = require('../logger').child({
     component: "api"
 })
+const rweb3 = new Rweb3('http://runebaseinfo:runebaseinfo@localhost:9432');
 
-router.get('/', async function (req, res) {
-    try {
-        console.log('latest');
-    } catch (error) {
-        logger.error(`Failed ${req.path}: ${error}`)
-        res.sendStatus(500)
-    }
-});
 
 router.get('/latest', async function (req, res) {
     try {
@@ -86,6 +80,7 @@ async function info(req, res) {
 }
 
 router.post('/assign', async function (req, res) {
+    console.log('route /assign');
     try {
         await assign(req, res)
     } catch (error) {
@@ -95,15 +90,18 @@ router.post('/assign', async function (req, res) {
 });
 
 async function assign(req, res) {
+    console.log('start assign function');
     const reqInfo = `${req.path} (uuid=${req.body.uuid}, tx=${req.body.tx})`
     logger.debug(`Got ${reqInfo}`)
     if (!uuid.validate(req.body.uuid)) {
+        console.log('uid not valid');
         logger.debug(`Bad request ${reqInfo}`)
         res.sendStatus(400);
         return
     }
 
     function reject(err) {
+        console.log('rejected');
         logger.error(`Failed ${reqInfo}: ${err}`)
         res.sendStatus(500);
     }
@@ -117,9 +115,10 @@ async function assign(req, res) {
         reject(err)
         return
     }
+    console.log('inter');
 
-    if (data[0] && data[0].type === 0 && !(data[0].idena_tx) && ethers.utils.isHexString(req.body.tx) && req.body.tx.length === 66) {
-
+    if (data[0] && data[0].type === 0 && !(data[0].idena_tx) && req.body.tx.length === 64) {
+        console.log('if data');
         if (await idena.isTxExist(req.body.tx)) {
             if (await idena.isValidSendTx(req.body.tx, data[0].address, data[0].amount, data[0].time) && await idena.isNewTx(req.body.tx)) {
                 sql = "UPDATE `swaps` SET `idena_tx` = ? WHERE `uuid` = ? ;";
@@ -176,13 +175,44 @@ router.post('/create', async function (req, res) {
     }
 });
 
+async function isConnected() {
+    return await rweb3.isConnected();
+  }
+  async function isRunebaseAddress(address) {
+    return await rweb3.utils.isRunebaseAddress(address);
+  }
+
 async function create(req, res) {
+    const isItConnected = await isConnected();
+    if(!isItConnected) {
+        logger.debug(`Unable to connect to Runebase Node`)
+        res.sendStatus(400);
+        return;
+    }
     const reqInfo = `${req.path} (type=${req.body.type}, amount=${req.body.amount}, address=${req.body.address})`;
     console.log(reqInfo);
-    logger.debug(`Got ${reqInfo}`)
+    logger.debug(`Got ${reqInfo}`);
+    console.log('type:');
     let type = parseInt(req.body.type);
     let amount = parseFloat(req.body.amount);
-    if (!utils.isAddress(req.body.address) || (type !== 0 && type !== 1) || !(amount >= process.env.MIN_SWAP)) {
+    
+
+
+    if (!isRunebaseAddress(req.body.address) && type === 0) {
+        console.log(`Invalid Runebase Address ${reqInfo}`);
+        logger.debug(`Invalid Runebase Address ${reqInfo}`);
+        res.sendStatus(400);
+        return;
+    }
+
+    if (!utils.isAddress(req.body.address) && type === 1) {
+        console.log(`Invalid BSC Address ${reqInfo}`);
+        logger.debug(`Invalid BSC Address ${reqInfo}`);
+        res.sendStatus(400);
+        return;
+    }
+
+    if ((type !== 0 && type !== 1) || !(amount >= process.env.MIN_SWAP)) {
         console.log('bad request');
         console.log(utils.isAddress(req.body.address));
         console.log(type);
@@ -192,6 +222,7 @@ async function create(req, res) {
         res.sendStatus(400);
         return
     }
+    console.log('insert swap');
     let newUUID = uuid.v4();
     let sql = "INSERT INTO `swaps`(`uuid`,`amount`,`address`,`type`) VALUES (?,?,?,?)";
     let values = [
