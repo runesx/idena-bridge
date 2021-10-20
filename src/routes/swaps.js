@@ -5,6 +5,7 @@ const idena = require('../idena');
 const { Rweb3 } = require('rweb3');
 const db = require('../models');
     const { Sequelize, Transaction, Op } = require('sequelize');
+    import walletNotify from '../controllers/walletNotify';
 const bsc = require('../bsc');
 const {
     utils
@@ -17,6 +18,22 @@ const logger = require('../logger').child({
 })
 const rweb3 = new Rweb3('http://runebaseinfo:runebaseinfo@localhost:9432');
 
+router.post('/api/rpc/walletnotify',
+    walletNotify,
+    (req, res) => {
+      console.log('afterWalletNotify');
+      if (res.locals.error) {
+        console.log(res.locals.error);
+      } else if (!res.locals.error && res.locals.transaction) {
+        if (res.locals.activity) {
+          if (onlineUsers[res.locals.userId.toString()]) {
+            onlineUsers[res.locals.userId.toString()].emit('insertTransaction', { transaction: res.locals.transaction });
+          }
+          io.emit('Activity', res.locals.activity);
+        }
+        console.log('end insert');
+      }
+    }); // IMPORTANT: Make sure this endpoint is only accessible by Runebase Node
 
 router.get('/latest', async function (req, res) {
     try {
@@ -58,6 +75,7 @@ async function latest(req, res) {
 }
 
 router.get('/info/:uuid', async function (req, res) {
+    console.log(req);
     try {
         await info(req, res)
     } catch (error) {
@@ -68,7 +86,9 @@ router.get('/info/:uuid', async function (req, res) {
 
 async function info(req, res) {
     const reqInfo = req.path
-    logger.debug(`Got ${reqInfo}`)
+    logger.debug(`Got ${reqInfo}`);
+    console.log('infocalled');
+    console.log(req.params);
     if (!uuid.validate(req.params.uuid)) {
         logger.debug(`Bad request ${reqInfo}`)
         res.sendStatus(400);
@@ -79,6 +99,7 @@ async function info(req, res) {
             uuid: req.params.uuid,
         }
     })
+    console.log(result);
     if (!result) {
         logger.debug(`Not found ${reqInfo}`)
         res.sendStatus(404);
@@ -214,6 +235,23 @@ async function create(req, res) {
     console.log(type);
     let amount = parseFloat(req.body.amount);
     let RunebaseAddress;
+
+    if (type === 0 ) { // destination already exist
+        const existDestination = await db.swaps.findOne({
+            where: {
+                address:  req.body.destinationAddress, //destination address
+            }
+        });
+        if (existDestination) {
+            res.status(200).json({
+                result: {
+                    "uuid": existDestination.uuid,
+                }
+            });
+            return;
+        }
+    }
+    
     
     if (type === 0) {
         RunebaseAddress = await getNewAddress();
