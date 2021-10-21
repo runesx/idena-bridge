@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
       },
       runebase_tx: {
-        type: DataTypes.STRING(42),
+        type: DataTypes.STRING(64),
         allowNull: true,
       },
       bsc_tx: {
@@ -34,7 +34,11 @@ module.exports = (sequelize, DataTypes) => {
       spendBscFee: {
         type: DataTypes.BIGINT,
         allowNull: true,
-      },     
+      },
+      fail_reason: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },   
     };
   
     // 2: The model options.
@@ -47,7 +51,6 @@ module.exports = (sequelize, DataTypes) => {
   
     TransactionModel.associate = (model) => {
         TransactionModel.belongsTo(model.instances);
-      //ActiveModel.belongsTo(model.user);
     };
   
     return TransactionModel;

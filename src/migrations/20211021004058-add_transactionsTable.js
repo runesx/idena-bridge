@@ -8,7 +8,7 @@ module.exports = {
         autoIncrement: true,
       },
       runebase_tx: {
-        type: DataTypes.STRING(42),
+        type: DataTypes.STRING(64),
         allowNull: true,
       },
       bsc_tx: {
@@ -33,6 +33,10 @@ module.exports = {
       },
       spendBscFee: {
         type: DataTypes.BIGINT,
+        allowNull: true,
+      },
+      fail_reason: {
+        type: DataTypes.STRING(255),
         allowNull: true,
       },
       createdAt: {

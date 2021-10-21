@@ -13,7 +13,13 @@ const {
     startRunebaseEnv,
     waitRunebaseNodeSync,
     listTransactions,
+    listUnspent,
 } = require('./runebase/calls');
+
+const {
+    consolidate,
+} = require('./runebase/consolidate');
+
 
 
 async function handleIdenaToBscSwap(swap, conP, logger) {
@@ -187,46 +193,79 @@ async function patchRunebaseTransactions() {
                     } else {
                         const dbTransaction = await db.transactions.findOne({
                             where: {
-                                txid: transaction.txid,
+                                runebase_tx: transaction.txid,
                             },
+                            include: [
+                                {
+                                  model: db.instances,
+                                  as: 'instance',
+                                },
+                              ],
                         });
-                        console.log(dbTransaction)
+                        
                         if (!dbTransaction) {
-                            // insert transaction into db
-                        } else {
-                            // Update Confirmations 
-
-                            // If confirmations >= 6 then mint wRUNES
-                        }
-                        await db.sequelize.transaction({
-                            isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
-                        }, async (t) => {
-                            // Create Transaction Record
-                            // Handle swap await handleSwap(swap, conP, swapLogger)
-                            console.log('checkrunebasetransactions');
-                            console.log(instance);
-                            console.log(transaction);
-
-                            if (!pending.length) {
-                                return;
+                            if (transaction.amount > 3) {
+                                const newTransaction = await db.transactions.create({
+                                    runebase_tx: transaction.txid,
+                                    confirmations: transaction.confirmations,
+                                    amount: transaction.amount * 1e8,
+                                    collectedRunebaseFee: parseInt(process.env.RUNEBASE_FIXED_FEE),
+                                    instanceId: instance.id,
+                                });
+                            }                            
+                        } else if (!dbTransaction.minted && dbTransaction.confirmations >= 6) {
+                            // Mint Tokens                            
+                            let {
+                                hash,
+                                fees
+                            } = await bsc.mint(dbTransaction.instance.address, (dbTransaction.amount / 1e8));
+                            if (!hash) {
+                                logger.log("Unable to mint bsc coins");
+                                logger.error("Unable to mint bsc coins");
+                                const updateTransaction = await dbTransaction.update({
+                                    confirmations: transaction.confirmations,
+                                    fail_reason: 'bsc.mint function failed',
+                                    minted: true,
+                                });
                             }
-                            for (let swap of data) {
-                                const swapLogger = logger.child({swapId: swap.uuid})
-                                try {
-                                    //console.log('before handleswap');
+                            if (hash) {
+                                await db.sequelize.transaction({
+                                    isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+                                }, async (t) => {
                                     
-                                } catch (error) {
-                                    swapLogger.error(`Failed to handle swap: ${error}`);
-                                }
-                            }
-                    
-                            t.afterCommit(() => {
-                            //next();
+                                    const updateTransaction = await dbTransaction.update({
+                                        confirmations: transaction.confirmations,
+                                        bsc_tx: hash,
+                                        minted: true,
+                                        spendBscFee: fees,
+                                    }, {
+                                        transaction: t,
+                                    });
+                                    t.afterCommit(() => {
+                                        console.log(`Swap completed, bsc tx hash: ${hash}, fees: ${fees}`);
+                                        console.info(`Swap completed, bsc tx hash: ${hash}, fees: ${fees}`);
+                                    });
+                                }).catch((err) => {
+                                    console.log(err.message);
+                                    logger.error(`Failed to load pending swaps: ${err.message}`);
+                                });                          
+                                
+                            } 
+                        } else if (!dbTransaction.minted && dbTransaction.confirmations < 6) {
+                            await db.sequelize.transaction({
+                                isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+                            }, async (t) => {
+                                const updateTransaction = await dbTransaction.update({
+                                    confirmations: transaction.confirmations,
+                                });
+                                t.afterCommit(() => {
+                                //next();
+                                });
+                            }).catch((err) => {
+                                console.log(err.message);
+                                logger.error(`Failed to load pending swaps: ${err.message}`);
                             });
-                        }).catch((err) => {
-                            console.log(err.message);
-                            logger.error(`Failed to load pending swaps: ${err.message}`);
-                        });
+                        }                        
                     } 
                 }
             }                         
@@ -239,6 +278,17 @@ async function loopRunebaseTransactions() {
     setTimeout(loopRunebaseTransactions, parseInt(process.env.CHECKING_DELAY));
 }
 
+async function consolidateRunebase() {    
+    const consolidateNow = await consolidate();
+    return;
+}
+
+async function loopConsolidateRunebase() {
+    //console.log('loopcheckswapsstart');
+    await consolidateRunebase();
+    setTimeout(loopConsolidateRunebase, parseInt(process.env.CHECKING_DELAY));
+}
+
 app.use(cors())
 app.use(bodyParser.json());
 app.use('/', swaps);
@@ -248,6 +298,7 @@ async function start() {
     await waitRunebaseNodeSync();
     //loopCheckSwaps();
     loopRunebaseTransactions();
+    loopConsolidateRunebase();
     const port = 8000;
     app.listen(port, () => console.log(`Server started, listening on port: ${port}`));
 }

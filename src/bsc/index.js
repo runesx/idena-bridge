@@ -12,7 +12,9 @@ const logger = require('../logger').child({
 
 exports.mint = async function (address, amount) {
     try {
+
         amount = ethers.utils.parseEther((parseFloat(amount)).toString());
+        console.log(process.env.BSC_RPC);
         const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC, parseInt(process.env.BSC_NETWORK));
         const signer = new ethers.Wallet(process.env.BSC_PRIVATE_KEY, provider);
         const contract = new ethers.Contract(
@@ -20,16 +22,20 @@ exports.mint = async function (address, amount) {
             abi,
             signer
         );
-        let idenaPrice = await getIdenaPrice();
-        if (idenaPrice == 0) {
-            return null
-        }
-        let fees = ethers.utils.parseUnits((await provider.getGasPrice() * await contract.estimateGas.mint(address, amount) / idenaPrice).toString(), 'ether').div(ethers.BigNumber.from(100)).mul(ethers.BigNumber.from(process.env.BSC_FEES));
+        //let idenaPrice = await getIdenaPrice();
+        //if (idenaPrice == 0) {
+        //    return null
+        //}
+        console.log(provider);
+        const minted = await contract.mint(address, amount);
+        console.log(minted);
+        //let fees = ethers.utils.parseUnits((await provider.getGasPrice() * await contract.estimateGas.mint(address, amount) / idenaPrice).toString(), 'ether').div(ethers.BigNumber.from(100)).mul(ethers.BigNumber.from(process.env.BSC_FEES));
         return {
-            hash: (await contract.mint(address, amount.sub(fees))).hash,
-            fees: parseFloat(fees / 10 ** 18)
+            hash: minted.hash,
+            fees: 100 //parseFloat(fees / 10 ** 18)
         }
     } catch (error) {
+        console.log(`Failed to mint: ${error}`);
         logger.error(`Failed to mint: ${error}`);
         return null
     }

@@ -9,7 +9,17 @@ export const startRunebaseEnv = async () => {
 }
 export const isRunebaseConnected = async () => {
     const blockchainInfo = await getInstance().getBlockchainInfo();
-    return;
+    return blockchainInfo;
+}
+
+export const listUnspentForAddress = async () => {
+    const blockchainInfo = await getInstance().listUnspent();
+    return blockchainInfo;
+}
+
+export const listUnspent = async () => {
+    const unspent = await getInstance().listUnspent();
+    return unspent;
 }
 
 const delay = ms => new Promise(res => setTimeout(res, ms));
