@@ -48,7 +48,7 @@ router.get('/latest', async function (req, res) {
 async function latest(req, res) {
     const reqInfo = req.path
     logger.debug(`Got ${reqInfo}`);
-    const result = await db.swaps.findAll({
+    const result = await db.instances.findAll({
         where: {
           userId: req.user.id,
         },
@@ -94,7 +94,7 @@ async function info(req, res) {
         res.sendStatus(400);
         return
     }
-    const result = await db.swaps.findOne({
+    const result = await db.instances.findOne({
         where: {
             uuid: req.params.uuid,
         }
@@ -237,7 +237,7 @@ async function create(req, res) {
     let RunebaseAddress;
 
     if (type === 0 ) { // destination already exist
-        const existDestination = await db.swaps.findOne({
+        const existDestination = await db.instances.findOne({
             where: {
                 address:  req.body.destinationAddress, //destination address
             }
@@ -302,7 +302,7 @@ async function create(req, res) {
     await db.sequelize.transaction({
         isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
       }, async (t) => {
-        const activity = await db.swaps.create({
+        const activity = await db.instances.create({
             uuid: newUUID,
             amount: amount.toFixed(8),
             address: req.body.destinationAddress,

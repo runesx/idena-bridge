@@ -1,4 +1,4 @@
-import { getInstance } from '../services/rclient';
+import { getInstance } from '../runebase/rclient';
 
 import db from '../models';
 

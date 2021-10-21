@@ -32,14 +32,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
         defaultValue: new Date(Date.now()),
       },
-      idena_tx: {
-        type: DataTypes.STRING(66),
-        allowNull: true,
-      },
-      bsc_tx: {
-        type: DataTypes.STRING(66),
-        allowNull: true,
-      },
       status: {
         type: DataTypes.STRING(20),
         allowNull: false,
@@ -66,12 +58,13 @@ module.exports = (sequelize, DataTypes) => {
     };
   
     // 3: Define the Wallet model.
-    const SwapsModel = sequelize.define('swaps', modelDefinition, modelOptions);
+    const InstancesModel = sequelize.define('instances', modelDefinition, modelOptions);
   
-    SwapsModel.associate = (model) => {
+    InstancesModel.associate = (model) => {
+      InstancesModel.hasMany(model.transactions);
       //ActiveModel.belongsTo(model.group);
       //ActiveModel.belongsTo(model.user);
     };
   
-    return SwapsModel;
+    return InstancesModel;
   };

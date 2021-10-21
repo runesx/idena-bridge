@@ -8,9 +8,13 @@ const express = require('express'),
     const db = require('./models');
     const { Sequelize, Transaction, Op } = require('sequelize');
 const logger = require('./logger').child({component: "processing"})
-logger.info('RUNES bridge started')
-console.log('RUNES bridge started')
 const swaps = require('./routes/swaps');
+const {
+    startRunebaseEnv,
+    waitRunebaseNodeSync,
+    listTransactions,
+} = require('./runebase/calls');
+
 
 async function handleIdenaToBscSwap(swap, conP, logger) {
     console.log('handleIdenaToBscSwap');
@@ -131,7 +135,8 @@ async function checkSwaps() {
     await db.sequelize.transaction({
         isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
       }, async (t) => {
-        const pending = await db.swaps.findAll({
+          console.log('checkswaps');
+        const pending = await db.instances.findAll({
             where: {
               status: 'pending',
             },
@@ -143,7 +148,7 @@ async function checkSwaps() {
             const swapLogger = logger.child({swapId: swap.uuid})
             try {
                 //console.log('before handleswap');
-                await handleSwap(swap, conP, swapLogger)
+                //await handleSwap(swap, conP, swapLogger)
             } catch (error) {
                 swapLogger.error(`Failed to handle swap: ${error}`);
             }
@@ -164,17 +169,87 @@ async function loopCheckSwaps() {
     setTimeout(loopCheckSwaps, parseInt(process.env.CHECKING_DELAY));
 }
 
+async function patchRunebaseTransactions() {
+    const transactions = await listTransactions(100);
+    if (transactions) {
+        for (const transaction of transactions) {
+            if (transaction.category === "receive") {
+                if (transaction.address) {
+                    //console.log(transaction);
+                    const instance = await db.instances.findOne({
+                        where: {
+                            depositAddress: transaction.address,
+                            status: 'pending',
+                        },               
+                    });                
+                    if (!instance) {
+                        console.log('not found');
+                    } else {
+                        const dbTransaction = await db.transactions.findOne({
+                            where: {
+                                txid: transaction.txid,
+                            },
+                        });
+                        console.log(dbTransaction)
+                        if (!dbTransaction) {
+                            // insert transaction into db
+                        } else {
+                            // Update Confirmations 
+
+                            // If confirmations >= 6 then mint wRUNES
+                        }
+                        await db.sequelize.transaction({
+                            isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
+                        }, async (t) => {
+                            // Create Transaction Record
+                            // Handle swap await handleSwap(swap, conP, swapLogger)
+                            console.log('checkrunebasetransactions');
+                            console.log(instance);
+                            console.log(transaction);
+
+                            if (!pending.length) {
+                                return;
+                            }
+                            for (let swap of data) {
+                                const swapLogger = logger.child({swapId: swap.uuid})
+                                try {
+                                    //console.log('before handleswap');
+                                    
+                                } catch (error) {
+                                    swapLogger.error(`Failed to handle swap: ${error}`);
+                                }
+                            }
+                    
+                            t.afterCommit(() => {
+                            //next();
+                            });
+                        }).catch((err) => {
+                            console.log(err.message);
+                            logger.error(`Failed to load pending swaps: ${err.message}`);
+                        });
+                    } 
+                }
+            }                         
+        }
+    }    
+}
+
+async function loopRunebaseTransactions() {
+    await patchRunebaseTransactions();
+    setTimeout(loopRunebaseTransactions, parseInt(process.env.CHECKING_DELAY));
+}
 
 app.use(cors())
 app.use(bodyParser.json());
 app.use('/', swaps);
 
 async function start() {
-    //await idena.initNonce()
-    loopCheckSwaps();
+    await startRunebaseEnv();
+    await waitRunebaseNodeSync();
+    //loopCheckSwaps();
+    loopRunebaseTransactions();
     const port = 8000;
-    console.log("startup");
-    app.listen(port, () => logger.info(`Server started, listening on port: ${port}`));
+    app.listen(port, () => console.log(`Server started, listening on port: ${port}`));
 }
 
 start()

@@ -1,6 +1,6 @@
 module.exports = {
   up: async (queryInterface, DataTypes) => {
-    await queryInterface.createTable('swaps', {
+    await queryInterface.createTable('instances', {
       id: {
         type: DataTypes.BIGINT,
         allowNull: false,
@@ -32,14 +32,6 @@ module.exports = {
         allowNull: true,
         defaultValue: new Date(Date.now()),
       },
-      idena_tx: {
-        type: DataTypes.STRING(66),
-        allowNull: true,
-      },
-      bsc_tx: {
-        type: DataTypes.STRING(66),
-        allowNull: true,
-      },
       status: {
         type: DataTypes.STRING(20),
         allowNull: false,
@@ -69,6 +61,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, DataTypes) => {
-    await queryInterface.dropTable('swaps');
+    await queryInterface.dropTable('instances');
   },
 };
