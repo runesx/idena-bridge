@@ -139,64 +139,59 @@ async function assign(req, res) {
         logger.error(`Failed ${reqInfo}: ${err}`)
         res.sendStatus(500);
     }
+    
+    const instance = await db.instances.findOne({
+        where: {
+            uuid: req.body.uuid,
+        },
+        include: [
+            {
+              model: db.transactions,
+              as: 'transactions',
+            },
+          ],
+    });
+    console.log(instance);
 
-    let conP = db.promise();
-    let sql = "SELECT `uuid`,`amount`,`address`,`type`,`idena_tx`,`bsc_tx`, `time` FROM `swaps` WHERE `uuid` = ? LIMIT 1;";
-    let data
-    try {
-        [data] = await conP.execute(sql, [req.body.uuid]);
-    } catch (err) {
-        reject(err)
+    if (instance) {
+        console.log('found bridge');        
+    } else {
+        console.log('unable to find bridge');
+        logger.debug(`unable to find bridge ${reqInfo}`)
+        res.sendStatus(400);
         return
     }
-    console.log('inter');
 
-    if (data[0] && data[0].type === 0 && !(data[0].idena_tx) && req.body.tx.length === 64) {
-        console.log('if data');
-        if (await idena.isTxExist(req.body.tx)) {
-            if (await idena.isValidSendTx(req.body.tx, data[0].address, data[0].amount, data[0].time) && await idena.isNewTx(req.body.tx)) {
-                sql = "UPDATE `swaps` SET `idena_tx` = ? WHERE `uuid` = ? ;";
-                conP.execute(sql, [req.body.tx, req.body.uuid]).then(() => {
-                    logger.debug(`Completed ${reqInfo}`)
+    console.log(req.body);
+
+    if (instance && instance.type === 0 && !(instance.idena_tx) && req.body.txid.length === 64) {
+        console.log('if data');        
+    }
+    if (instance && instance.type === 1 && !(instance.transactions) && ethers.utils.isHexString(req.body.txid) && req.body.txid.length === 66) {
+        if (await bsc.isTxExist(req.body.txid)) {
+            if (
+                await bsc.isValidBurnTx(req.body.txid, instance.depositAddress, instance.amount, instance.time) 
+                && await bsc.isNewTx(req.body.txid)
+                ) {
+                const newTransaction = await db.transactions.create({
+                  instanceId: instance.id,
+                  bsc_tx: req.body.txid,
+                  amount: instance.amount,
+                });
+                if (newTransaction) {
+                    logger.debug(`Completed ${reqInfo}`);
+                    console.log(`Completed ${reqInfo}`);
                     res.sendStatus(200);
-                }).catch(reject)
-                return
+                }
+                if (!newTransaction) {
+                    logger.debug(`Bad request ${reqInfo}`)
+                    res.sendStatus(400);
+                    return
+                }                
             }
-            logger.debug(`Bad request ${reqInfo}`)
-            res.sendStatus(400);
-            return
-        }
 
-        sql = "UPDATE `swaps` SET `idena_tx` = ? WHERE `uuid` = ?;";
-        conP.query(sql, [req.body.tx, req.body.uuid]).then(() => {
-            logger.debug(`Completed ${reqInfo}`)
-            res.sendStatus(200);
-        }).catch(reject)
-        return
-    }
-    if (data[0] && data[0].type === 1 && !(data[0].bsc_tx) && ethers.utils.isHexString(req.body.tx) && req.body.tx.length === 66) {
-        if (await bsc.isTxExist(req.body.tx)) {
-            if (await bsc.isValidBurnTx(req.body.tx, data[0].address, data[0].amount, data[0].time) && await bsc.isNewTx(req.body.tx)) {
-                sql = "UPDATE `swaps` SET `bsc_tx` = ? WHERE `uuid` = ?;";
-                conP.query(sql, [req.body.tx, req.body.uuid]).then(() => {
-                    logger.debug(`Completed ${reqInfo}`)
-                    res.sendStatus(200);
-                }).catch(reject)
-                return
-            }
-            logger.debug(`Bad request ${reqInfo}`)
-            res.sendStatus(400);
-            return
         }
-        sql = "UPDATE `swaps` SET `bsc_tx` = ? WHERE `uuid` = ?;";
-        conP.query(sql, [req.body.tx, req.body.uuid]).then(() => {
-            logger.debug(`Completed ${reqInfo}`)
-            res.sendStatus(200);
-        }).catch(reject)
-        return
     }
-    logger.debug(`Bad request ${reqInfo}`)
-    res.sendStatus(400);
 }
 
 router.post('/create', async function (req, res) {
@@ -288,7 +283,16 @@ async function create(req, res) {
         return;
     }
 
-    if (type !== 0 && !(amount >= process.env.MIN_SWAP)) {
+    if (type !== 0 && (type !== 1)) {
+        console.log('Invalid Type');
+        logger.debug(`Invalid Type ${reqInfo}`)
+        res.status(500).send({
+            error: 'Invalid Type',
+          });
+        return
+    }
+
+    if (type === 0 && (amount <= process.env.MIN_SWAP)) {
         console.log('bad request');
         logger.debug(`Bad request ${reqInfo}`)
         res.status(500).send({
@@ -296,6 +300,17 @@ async function create(req, res) {
           });
         return
     }
+
+    if (type === 1 && (amount <= 100)) {
+        console.log('bad request');
+        logger.debug(`Bad request ${reqInfo}`)
+        res.status(500).send({
+            error: 'Invalid Amount',
+          });
+        return
+    }
+
+    console.log(req.body);
 
     console.log('insert swap');
     let newUUID = uuid.v4();
@@ -306,7 +321,7 @@ async function create(req, res) {
             uuid: newUUID,
             amount: amount.toFixed(8),
             address: req.body.destinationAddress,
-            depositAddress: type === 0 && RunebaseAddress ? RunebaseAddress : null,
+            depositAddress: type === 0 && RunebaseAddress ? RunebaseAddress : req.body.address,
             type,
           }, {
             transaction: t,

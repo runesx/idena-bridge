@@ -3,6 +3,7 @@ const {
 } = require('axios');
 const ethers = require('ethers');
 const abi = require('./abi.js');
+const db = require('../models');
 const InputDataDecoder = require('ethereum-input-data-decoder');
 require('dotenv').config();
 const logger = require('../logger').child({
@@ -43,7 +44,6 @@ exports.mint = async function (address, amount) {
 }
 
 exports.isValidBurnTx = async function (txHash, address, amount, date) {
-    console.log('isvalidBurnTX');
     function extractDestAddress(inputData) {
         try {
             if (!inputData) {
@@ -60,7 +60,6 @@ exports.isValidBurnTx = async function (txHash, address, amount, date) {
             return false
         }
     }
-
     try {
         const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC, parseInt(process.env.BSC_NETWORK));
         const contract = new ethers.Contract(
@@ -74,46 +73,55 @@ exports.isValidBurnTx = async function (txHash, address, amount, date) {
 
         if (txReceipt.status !== 1) {
             logger.info(`Wrong status, actual: ${txReceipt.status}, expected: 1`);
+            console.log(`Wrong status, actual: ${txReceipt.status}, expected: 1`);
             return false
         }
         if (txReceipt.logs.length === 0) {
             logger.info(`No logs`);
+            console.log(`No logs`);
             return false
         }
         if (txReceipt.to.toLowerCase() !== process.env.BSC_CONTRACT.toLowerCase()) {
             logger.info(`Wrong recipient, actual: ${txReceipt.to}, expected: ${process.env.BSC_CONTRACT}`);
+            console.log(`Wrong recipient, actual: ${txReceipt.to}, expected: ${process.env.BSC_CONTRACT}`);
             return false
         }
         let tx = await provider.getTransaction(txHash)
         let destAddress = tx && extractDestAddress(tx.data)
         if (destAddress.toLowerCase() !== address.toLowerCase().slice(2)) {
             logger.info(`Wrong dest address, actual: ${destAddress}, expected: ${address}`);
+            console.log(`Wrong dest address, actual: ${destAddress}, expected: ${address}`);
             return false
         }
         const method = contract.interface.parseLog(txReceipt.logs[0]).name
         if (method !== "Transfer") {
             logger.info(`Wrong method, actual: ${method}, expected: Transfer`);
+            console.log(`Wrong method, actual: ${method}, expected: Transfer`);
             return false
         }
         const value = contract.interface.parseLog(txReceipt.logs[0]).args.value
         if (!(value >= ethers.utils.parseEther(amount.toString()))) {
             logger.info(`Wrong value, actual: ${value}, expected: at least ${amount}`);
+            console.log(`Wrong value, actual: ${value}, expected: at least ${amount}`);
             return false
         }
         const from = contract.interface.parseLog(txReceipt.logs[0]).args.from
         if (from.toLowerCase() !== tx.from.toLowerCase()) {
             logger.info(`Wrong sender, actual: ${from}, expected: ${tx.from}`);
+            console.log(`Wrong sender, actual: ${from}, expected: ${tx.from}`);
             return false
         }
         const to = contract.interface.parseLog(txReceipt.logs[0]).args.to
         if (to.toLowerCase() !== "0x0000000000000000000000000000000000000000") {
             logger.info(`Wrong recipient, actual: ${to}, expected: 0x0000000000000000000000000000000000000000`);
+            console.log(`Wrong recipient, actual: ${to}, expected: 0x0000000000000000000000000000000000000000`);
             return false
         }
         const block = await provider.getBlock(tx.blockHash)
         const blockDate = new Date(block.timestamp * 1000);
         if (blockDate.getTime() < date.getTime()) {
             logger.info("Tx is not actual");
+            console.log("Tx is not actual");
             return false
         }
         return true
@@ -125,8 +133,12 @@ exports.isValidBurnTx = async function (txHash, address, amount, date) {
 
 exports.isTxExist = async function (txHash) {
     try {
+        console.log(process.env.BSC_RPC);
+        console.log(process.env.BSC_NETWORK);
         const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC, parseInt(process.env.BSC_NETWORK));
         let tx = await provider.getTransactionReceipt(txHash);
+        console.log('isTxExist tx');
+        console.log(tx);
         if (tx) {
             return true
         } else {
@@ -170,16 +182,26 @@ async function getIdenaPrice() {
     }
 }
 
-exports.isNewTx = async function (tx) {
+exports.isNewTx = async function (tx) {   
+    
+    console.log(tx); 
     try {
-        const [data] = await db.promise().execute("SELECT `id` FROM `used_txs` WHERE `tx_hash` = ? AND `blockchain` = 'bsc';", [tx]);
-        if (data[0]) {
+        const transaction = await db.transactions.findOne({
+            where: {
+                bsc_tx: tx,
+            }
+        });
+        if (transaction) {
+            console.log('transaction found');
             return false
-        } else {
+        }
+        if (!transaction){
+            console.log('transaction not found');
             return true
         }
     } catch (error) {
         logger.error(`Failed to check if tx is new: ${error}`);
+        console.log(`Failed to check if tx is new: ${error}`);
         return false
     }
 }
