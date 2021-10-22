@@ -21,20 +21,24 @@ const {
 } = require('./runebase/consolidate');
 
 
-async function handleBscToIdenaSwap(swap, logger) {
-    if (!await bsc.isValidBurnTx(swap.bsc_tx, swap.address, swap.amount, swap.time)) {
+async function handleBscToRunebaseSwap(swap, logger) {
+    console.log('handleBscToRunebaseSwap');
+    if (!await bsc.isValidBurnTx(swap.transactions[0].bsc_tx, swap.address, swap.amount, swap.time)) {
         // not valid
-        logger.info("BSC tx is invalid")
+        logger.info("BSC tx is invalid");
+        console.log("BSC tx is invalid");
         await conP.execute("UPDATE `swaps` SET `status` = 'Fail' , `mined` = '2' , `fail_reason` = 'Not Valid' WHERE `uuid` = ?", [swap.uuid])
     }
-    if (!await bsc.isNewTx(swap.bsc_tx)) {
+    if (!await bsc.isNewTx(swap.transactions[0].bsc_tx)) {
         // not new
-        logger.info("BSC tx already used")
+        logger.info("BSC tx already used");
+        console.log("BSC tx already used");
         await conP.execute("UPDATE `swaps` SET `status` = 'Fail' , `mined` = '2' , `fail_reason` = 'Not Valid' WHERE `uuid` = ?", [swap.uuid])
     }
-    if (!await bsc.isTxConfirmed(swap.bsc_tx)) {
+    if (!await bsc.isTxConfirmed(swap.transactions[0].bsc_tx)) {
         // waiting to be confirmed
-        logger.debug("BSC tx is not confirmed")
+        logger.debug("BSC tx is not confirmed");
+        console.log("BSC tx is not confirmed");
         await conP.execute("UPDATE `swaps` SET `mined` = '0' WHERE `uuid` = ?", [swap.uuid])
     }
     // confirmed
@@ -59,10 +63,11 @@ async function handleBscToIdenaSwap(swap, logger) {
 }
 
 async function handleSwap(swap, logger) {
+    console.log(swap);
 
     if (swap.type === 1 && swap.bsc_tx) {
         console.log('WRUNES TO RUNES');
-        await handleBscToIdenaSwap(swap, logger)
+        await handleBscToRunebaseSwap(swap, logger)
         return
     }
 
@@ -80,7 +85,7 @@ async function handleSwap(swap, logger) {
             minted: true,
             fail_reason: 'Time',
         });
-        await conP.execute("UPDATE `swaps` SET `status` = 'Fail' , `mined` = '2' ,`fail_reason` = 'Time' WHERE `uuid` = ?", [swap.uuid])
+        //await conP.execute("UPDATE `swaps` SET `status` = 'Fail' , `mined` = '2' ,`fail_reason` = 'Time' WHERE `uuid` = ?", [swap.uuid])
     }
     logger.trace("Swap skipped")
 }
@@ -108,7 +113,7 @@ async function checkSwaps() {
         for (let swap of pending) {
             const swapLogger = logger.child({swapId: swap.uuid})
             try {
-                //console.log('before handleswap');
+                console.log('before handleswap');
                 await handleSwap(swap, swapLogger)
             } catch (error) {
                 swapLogger.error(`Failed to handle swap: ${error}`);
@@ -144,7 +149,7 @@ async function patchRunebaseTransactions() {
                         },               
                     });                
                     if (!instance) {
-                        console.log('not found');
+                        //console.log('not found');
                     } else {
                         const dbTransaction = await db.transactions.findOne({
                             where: {
@@ -160,12 +165,14 @@ async function patchRunebaseTransactions() {
                         
                         if (!dbTransaction) {
                             if (transaction.amount > 3) {
+                                console.log(transaction);
                                 const newTransaction = await db.transactions.create({
                                     runebase_tx: transaction.txid,
                                     confirmations: transaction.confirmations,
                                     amount: transaction.amount * 1e8,
                                     collectedRunebaseFee: parseInt(process.env.RUNEBASE_FIXED_FEE),
                                     instanceId: instance.id,
+                                    from: transaction.from,
                                 });
                             }                            
                         } else if (!dbTransaction.minted && dbTransaction.confirmations >= 6) {

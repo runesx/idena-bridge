@@ -97,7 +97,13 @@ async function info(req, res) {
     const result = await db.instances.findOne({
         where: {
             uuid: req.params.uuid,
-        }
+        },
+        include: [
+            {
+              model: db.transactions,
+              as: 'transactions',
+            },
+          ],
     })
     console.log(result);
     if (!result) {
@@ -167,28 +173,46 @@ async function assign(req, res) {
     if (instance && instance.type === 0 && !(instance.idena_tx) && req.body.txid.length === 64) {
         console.log('if data');        
     }
-    if (instance && instance.type === 1 && !(instance.transactions) && ethers.utils.isHexString(req.body.txid) && req.body.txid.length === 66) {
+    if 
+    (
+        instance 
+        && instance.type === 1 
+        && !(instance.transactions) 
+        && ethers.utils.isHexString(req.body.txid) 
+        && req.body.txid.length === 66
+    ) 
+    {
+        console.log('888');
         if (await bsc.isTxExist(req.body.txid)) {
+            console.log('999');
             if (
-                await bsc.isValidBurnTx(req.body.txid, instance.depositAddress, instance.amount, instance.time) 
+                await bsc.isValidBurnTx(
+                    req.body.txid, 
+                    instance.depositAddress, 
+                    instance.amount, 
+                    instance.time
+                ) 
                 && await bsc.isNewTx(req.body.txid)
-                ) {
-                const newTransaction = await db.transactions.create({
-                  instanceId: instance.id,
-                  bsc_tx: req.body.txid,
-                  amount: instance.amount,
-                });
-                if (newTransaction) {
-                    logger.debug(`Completed ${reqInfo}`);
-                    console.log(`Completed ${reqInfo}`);
-                    res.sendStatus(200);
+                ) 
+                {
+                    console.log('insert new transaction');
+                    const newTransaction = await db.transactions.create({
+                    instanceId: instance.id,
+                    bsc_tx: req.body.txid,
+                    amount: instance.amount,
+                    });
+                    console.log(newTransaction);
+                    if (newTransaction) {
+                        logger.debug(`Completed ${reqInfo}`);
+                        console.log(`Completed ${reqInfo}`);
+                        res.sendStatus(200);
+                    }
+                    if (!newTransaction) {
+                        logger.debug(`Bad request ${reqInfo}`)
+                        res.sendStatus(400);
+                        return
+                    }                
                 }
-                if (!newTransaction) {
-                    logger.debug(`Bad request ${reqInfo}`)
-                    res.sendStatus(400);
-                    return
-                }                
-            }
 
         }
     }
@@ -230,12 +254,20 @@ async function create(req, res) {
     console.log(type);
     let amount = parseFloat(req.body.amount);
     let RunebaseAddress;
+    if(isNaN(amount)){
+        console.log(`Amount is not a number ${reqInfo}`);
+        logger.debug(`Amount is not a number ${reqInfo}`);
+        res.status(500).send({
+            error: 'Amount is not a number',
+          });
+        return;
+    }
 
     if (type === 0 ) { // destination already exist
         const existDestination = await db.instances.findOne({
             where: {
                 address:  req.body.destinationAddress, //destination address
-            }
+            },
         });
         if (existDestination) {
             res.status(200).json({
@@ -247,7 +279,8 @@ async function create(req, res) {
         }
     }
     
-    
+    console.log('not exist');
+
     if (type === 0) {
         RunebaseAddress = await getNewAddress();
         console.log(RunebaseAddress);
@@ -292,14 +325,14 @@ async function create(req, res) {
         return
     }
 
-    if (type === 0 && (amount <= process.env.MIN_SWAP)) {
-        console.log('bad request');
-        logger.debug(`Bad request ${reqInfo}`)
-        res.status(500).send({
-            error: 'Invalid Amount',
-          });
-        return
-    }
+    //if (type === 0 && (amount <= process.env.MIN_SWAP)) {
+    //    console.log('bad request');
+    //    logger.debug(`Bad request ${reqInfo}`)
+    //    res.status(500).send({
+    //        error: 'Invalid Amount',
+    //      });
+    //    return
+    // }
 
     if (type === 1 && (amount <= 100)) {
         console.log('bad request');

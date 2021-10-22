@@ -7,6 +7,10 @@ module.exports = {
         primaryKey: true,
         autoIncrement: true,
       },
+      from: {
+        type: DataTypes.STRING(42),
+        allowNull: true,
+      },
       runebase_tx: {
         type: DataTypes.STRING(64),
         allowNull: true,
