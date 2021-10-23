@@ -44,7 +44,8 @@ Object.keys(db).forEach((modelName) => {
   }
 });
 
-sequelize.queue = new PQueue({ concurrency: (sequelize.connectionManager.pool.maxSize - 1) });
+//sequelize.queue = new PQueue({ concurrency: (sequelize.connectionManager.pool.maxSize - 1) });
+sequelize.queue = new PQueue({ concurrency: 1 });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
