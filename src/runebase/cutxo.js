@@ -1,4 +1,7 @@
 const BigNumber = require("bignumber.js");
+const {
+    sendToAddress,
+} = require('./calls');
 
 const BN = BigNumber.clone({ DECIMAL_PLACES: 8 });
 
@@ -11,6 +14,11 @@ async function construct({ client, maximumAmount, limit, feeRate }) {
     console.log(unspent);
     console.log('listUnspend');
     const inputsTotal = unspent.length;
+
+    if (unspent.length === 1 && unspent[0].address !== process.env.RUNEBASE_PROOF_OF_RESERVE) {
+        sendToAddress(process.env.RUNEBASE_PROOF_OF_RESERVE, unspent[0].amount, '', '', true);
+        return;       
+    }
 
     if (unspent.length < 2) {
         console.log('Not Enough Unspent Transaction to consolidate');

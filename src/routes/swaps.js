@@ -154,10 +154,11 @@ async function assign(req, res) {
             {
               model: db.transactions,
               as: 'transactions',
+              required: false,
             },
           ],
     });
-    console.log(instance);
+    //console.log(instance);
 
     if (instance) {
         console.log('found bridge');        
@@ -168,16 +169,20 @@ async function assign(req, res) {
         return
     }
 
-    console.log(req.body);
+    //console.log(req.body);
+    console.log(req.body.txid.length);
+    console.log(instance.type );
+    console.log(instance.transactions);
+    console.log(ethers.utils.isHexString(req.body.txid) );
+    console.log(req.body.txid.length);
+    console.log(instance.transactions.length);
+    
 
-    if (instance && instance.type === 0 && !(instance.idena_tx) && req.body.txid.length === 64) {
-        console.log('if data');        
-    }
     if 
     (
         instance 
         && instance.type === 1 
-        && !(instance.transactions) 
+        && instance.transactions.length < 1 
         && ethers.utils.isHexString(req.body.txid) 
         && req.body.txid.length === 66
     ) 
@@ -219,7 +224,7 @@ async function assign(req, res) {
 }
 
 router.post('/create', async function (req, res) {
-    console.log(req.body);
+    //console.log(req.body);
     try {
         console.log('create');
         await create(req, res)
@@ -249,9 +254,9 @@ async function create(req, res) {
     const reqInfo = `${req.path} (type=${req.body.type}, address=${req.body.destinationAddress})`;
     console.log(reqInfo);
     logger.debug(`Got ${reqInfo}`);
-    console.log('type:');
+    //console.log('type:');
     let type = parseInt(req.body.type);
-    console.log(type);
+    //console.log(type);
     let amount = parseFloat(req.body.amount);
     let RunebaseAddress;
     if(isNaN(amount)){

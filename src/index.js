@@ -14,6 +14,7 @@ const {
     waitRunebaseNodeSync,
     listTransactions,
     listUnspent,
+    sendToAddress,
 } = require('./runebase/calls');
 
 const {
@@ -23,49 +24,87 @@ const {
 
 async function handleBscToRunebaseSwap(swap, logger) {
     console.log('handleBscToRunebaseSwap');
-    if (!await bsc.isValidBurnTx(swap.transactions[0].bsc_tx, swap.address, swap.amount, swap.time)) {
+    if (!await bsc.isValidBurnTx(swap.transactions[0].bsc_tx, swap.depositAddress, swap.amount, swap.time)) {
         // not valid
         logger.info("BSC tx is invalid");
         console.log("BSC tx is invalid");
-        await conP.execute("UPDATE `swaps` SET `status` = 'Fail' , `mined` = '2' , `fail_reason` = 'Not Valid' WHERE `uuid` = ?", [swap.uuid])
+        await swap.update({
+            status: 'Fail',
+            mined: 2,
+            fail_reason: 'Not Valid',
+        });
+        await swap.transaction[0].update({
+            minted: true,
+            fail_reason: 'Not Valid',
+        });
     }
+    console.log('handleBscToRunebaseSwap 1');
     if (!await bsc.isNewTx(swap.transactions[0].bsc_tx)) {
         // not new
         logger.info("BSC tx already used");
         console.log("BSC tx already used");
-        await conP.execute("UPDATE `swaps` SET `status` = 'Fail' , `mined` = '2' , `fail_reason` = 'Not Valid' WHERE `uuid` = ?", [swap.uuid])
+        await swap.update({
+            status: 'Fail',
+            mined: 2,
+            fail_reason: 'Not Valid',
+        });
+        await swap.transaction[0].update({
+            minted: true,
+            fail_reason: 'Not Valid',
+        });
     }
+    console.log('handleBscToRunebaseSwap 2');
     if (!await bsc.isTxConfirmed(swap.transactions[0].bsc_tx)) {
-        // waiting to be confirmed
-        logger.debug("BSC tx is not confirmed");
-        console.log("BSC tx is not confirmed");
-        await conP.execute("UPDATE `swaps` SET `mined` = '0' WHERE `uuid` = ?", [swap.uuid])
+        return;
     }
-    // confirmed
-    const [data2] = await conP.execute("INSERT INTO `used_txs`(`blockchain`,`tx_hash`) VALUES ('bsc',?);", [swap.bsc_tx]);
-    if (!data2.insertId) {
-        logger.error("Unable to insert used BSC tx")
-        return
-    }
-    let {
-        hash,
-        fees,
-        errorMessage
-    } = await idena.send(swap.address, swap.amount);
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    console.log('before sending');
+    
+
+    const hash = await sendToAddress(swap.address, swap.amount);
+    console.log(hash);
+ 
     if (!hash) {
-        const reason = errorMessage ? errorMessage : 'Unknown'
-        logger.error(`Unable to send idena tx: ${reason}`)
-        await conP.execute("UPDATE `swaps` SET `status` = 'Fail' ,`mined` = '1' ,`fail_reason` = ? WHERE `uuid` = ?", [reason, swap.uuid])
+        //const reason = errorMessage ? errorMessage : 'Unknown';
+        //logger.error(`Unable to send idena tx: ${reason}`);
+        console.log(`Unable to send runebase tx`);
+        await swap.update({
+            status: 'Fail',
+            mined: 1,
+            fail_reason: 'Unknown',
+        });
+        await swap.transaction[0].update({
+            minted: true,
+            fail_reason: 'Unknown',
+        });
         return
     }
-    logger.info(`Swap completed, idena tx hash: ${hash}`)
-    await conP.execute("UPDATE `swaps` SET `status` = 'Success' ,`mined` = '1' ,`idena_tx` = ? , `fees` = ? WHERE `uuid` = ?", [hash, fees, swap.uuid])
+    logger.info(`Swap completed, runebase tx hash: ${hash}`);
+    console.log(`Swap completed, runebase tx hash: ${hash}`);
+    const updateswap = await swap.update({
+        status: 'Success',
+        mined: 1,
+    });
+    console.log(updateswap);
+
+    const finalizeTransaction = await swap.transaction[0].update({
+        minted: true,
+        runebase_tx: hash,
+    });
+    console.log(finalizeTransaction);
 }
 
 async function handleSwap(swap, logger) {
-    console.log(swap);
-
-    if (swap.type === 1 && swap.bsc_tx) {
+    console.log('swap')
+    if (swap.type === 1 && swap.transactions[0].bsc_tx) {
         console.log('WRUNES TO RUNES');
         await handleBscToRunebaseSwap(swap, logger)
         return
@@ -165,7 +204,7 @@ async function patchRunebaseTransactions() {
                         
                         if (!dbTransaction) {
                             if (transaction.amount > 3) {
-                                console.log(transaction);
+                                //console.log(transaction);
                                 const newTransaction = await db.transactions.create({
                                     runebase_tx: transaction.txid,
                                     confirmations: transaction.confirmations,

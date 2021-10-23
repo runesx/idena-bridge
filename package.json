@@ -3,7 +3,9 @@
   "version": "0.0.1",
   "description": "Bridge for RUNES <-> wRUNES",
   "dependencies": {
+    "abi-decoder": "^2.4.0",
     "axios": "^0.21.1",
+    "bitcoin-core": "^3.0.0",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",
     "ethereum-input-data-decoder": "^0.3.1",

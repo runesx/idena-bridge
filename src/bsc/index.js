@@ -9,7 +9,8 @@ require('dotenv').config();
 const logger = require('../logger').child({
     component: "bsc"
 })
-
+const abiDecoder = require('abi-decoder');
+abiDecoder.addABI(abi);
 
 exports.mint = async function (address, amount) {
     try {
@@ -27,7 +28,7 @@ exports.mint = async function (address, amount) {
         //if (idenaPrice == 0) {
         //    return null
         //}
-        console.log(provider);
+        //console.log(provider);
         const minted = await contract.mint(address, amount);
         console.log(minted);
         //let fees = ethers.utils.parseUnits((await provider.getGasPrice() * await contract.estimateGas.mint(address, amount) / idenaPrice).toString(), 'ether').div(ethers.BigNumber.from(100)).mul(ethers.BigNumber.from(process.env.BSC_FEES));
@@ -68,8 +69,9 @@ exports.isValidBurnTx = async function (txHash, address, amount, date) {
         );
 
         let txReceipt = await provider.getTransactionReceipt(txHash);
-        console.log('txReceipt');
         console.log(txReceipt);
+        console.log('wtf')
+        
 
         if (txReceipt.status !== 1) {
             logger.info(`Wrong status, actual: ${txReceipt.status}, expected: 1`);
@@ -135,6 +137,7 @@ exports.isTxExist = async function (txHash) {
     try {
         console.log(process.env.BSC_RPC);
         console.log(process.env.BSC_NETWORK);
+        console.log(txHash);
         const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC, parseInt(process.env.BSC_NETWORK));
         let tx = await provider.getTransactionReceipt(txHash);
         console.log('isTxExist tx');
@@ -151,9 +154,16 @@ exports.isTxExist = async function (txHash) {
 }
 exports.isTxConfirmed = async function (txHash) {
     try {
+        console.log('isTxConfirmed');
         const provider = new ethers.providers.JsonRpcProvider(process.env.BSC_RPC, parseInt(process.env.BSC_NETWORK));
         let tx = await provider.getTransactionReceipt(txHash);
         if (tx) {
+            console.log(tx.confirmations);
+            console.log(tx.confirmations);
+            console.log(tx.confirmations);
+            console.log(tx.confirmations);
+            console.log('tx.confirmations');
+            
             return tx.confirmations >= process.env.BSC_CONFIRMATIONS_BLOCKS;
         } else {
             return false
@@ -183,26 +193,28 @@ async function getIdenaPrice() {
 }
 
 exports.isNewTx = async function (tx) {   
-    
+    console.log('isnewtx');
     console.log(tx); 
     try {
         const transaction = await db.transactions.findOne({
             where: {
-                bsc_tx: tx,
+                bsc_tx: tx.toString(),
+                minted: true,
             }
         });
+        console.log(transaction);
         if (transaction) {
             console.log('transaction found');
-            return false
+            return false;
         }
         if (!transaction){
             console.log('transaction not found');
-            return true
+            return true;
         }
     } catch (error) {
         logger.error(`Failed to check if tx is new: ${error}`);
         console.log(`Failed to check if tx is new: ${error}`);
-        return false
+        return false;
     }
 }
 

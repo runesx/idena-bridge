@@ -22,6 +22,12 @@ export const listUnspent = async () => {
     return unspent;
 }
 
+export const sendToAddress = async (address, amount, comment = '', commentTo = '', subtractFeeFromAmount = false) => {
+    
+    const unspent = await getInstance().sendToAddress(address, amount, comment, commentTo, subtractFeeFromAmount);
+    return unspent;
+}
+
 const delay = ms => new Promise(res => setTimeout(res, ms));
 //1. Create a new function that returns a promise
 export const waitRunebaseNodeSync = async () => {    
