@@ -102,6 +102,9 @@ async function info(req, res) {
             {
               model: db.transactions,
               as: 'transactions',
+              order: [
+                ['id', 'DESC'],
+            ],
             },
           ],
     })
@@ -116,6 +119,49 @@ async function info(req, res) {
         res.status(200).json({
             result
         })
+    }
+}
+
+router.get('/transactions', async function (req, res) {
+    console.log('get transactions...');
+    console.log('get transactions...');
+    console.log('get transactions...');
+    console.log('get transactions...');
+    console.log('get transactions...');
+    console.log('get transactions...');
+    console.log('get transactions...');
+    console.log('get transactions...');
+    
+    try {
+        await fetchTransactions(req, res)
+    } catch (error) {
+        logger.error(`Failed ${req.path}: ${error}`)
+        res.sendStatus(500)
+    }
+});
+
+async function fetchTransactions(req, res) {
+
+    const result = await db.transactions.findAll({
+        order: [
+            ['id', 'DESC'],
+        ],
+        include: [
+            {
+              model: db.instances,
+              as: 'instance',              
+            },
+          ],
+    })
+    if (!result) {
+        logger.debug(`Not found`);
+        res.sendStatus(404);
+                return;
+    }
+    if (result) {
+        logger.debug(`Completed`);
+        console.log(`Completed`);
+        res.status(200).json({result})
     }
 }
 
