@@ -7,6 +7,11 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         autoIncrement: true,
       },
+      blockchain: {
+        type: DataTypes.STRING(6),
+        allowNull: false,
+        defaultValue: 'BSC'
+      },
       address: {
         type: DataTypes.STRING(42),
         allowNull: true,
@@ -58,13 +63,13 @@ module.exports = (sequelize, DataTypes) => {
     };
   
     // 3: Define the Wallet model.
-    const InstancesModel = sequelize.define('instances', modelDefinition, modelOptions);
+    const BridgesModel = sequelize.define('bridges', modelDefinition, modelOptions);
   
-    InstancesModel.associate = (model) => {
-      InstancesModel.hasMany(model.transactions);
+    BridgesModel.associate = (model) => {
+      BridgesModel.hasMany(model.transactions);
       //ActiveModel.belongsTo(model.group);
       //ActiveModel.belongsTo(model.user);
     };
   
-    return InstancesModel;
+    return BridgesModel;
   };

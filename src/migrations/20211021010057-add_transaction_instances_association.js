@@ -1,11 +1,11 @@
 module.exports = {
   up: (queryInterface, Sequelize) => queryInterface.addColumn(
     'transactions',
-    'instanceId',
+    'bridgeId',
     {
       type: Sequelize.BIGINT,
       references: {
-        model: 'transactions',
+        model: 'bridges',
         key: 'id',
       },
       onUpdate: 'CASCADE',
@@ -15,6 +15,6 @@ module.exports = {
 
   down: (queryInterface, Sequelize) => queryInterface.removeColumn(
     'transactions',
-    'instanceId',
+    'bridgeId',
   ),
 };

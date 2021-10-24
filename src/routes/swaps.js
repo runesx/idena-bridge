@@ -48,7 +48,7 @@ router.get('/latest', async function (req, res) {
 async function latest(req, res) {
     const reqInfo = req.path
     logger.debug(`Got ${reqInfo}`);
-    const result = await db.instances.findAll({
+    const result = await db.bridges.findAll({
         where: {
           userId: req.user.id,
         },
@@ -94,30 +94,37 @@ async function info(req, res) {
         res.sendStatus(400);
         return
     }
-    const result = await db.instances.findOne({
+    const bridge = await db.bridges.findOne({
         where: {
             uuid: req.params.uuid,
         },
+    });
+    const transactions = await db.transactions.findAll({
+        order: [
+            ['id', 'DESC'],
+        ],
         include: [
             {
-              model: db.transactions,
-              as: 'transactions',
-              order: [
-                ['id', 'DESC'],
-            ],
+              where: {
+                uuid: req.params.uuid,
+              },
+              model: db.bridges,
+              as: 'bridge',                 
+              required: true,
             },
           ],
-    })
-    console.log(result);
-    if (!result) {
+    });
+    console.log(bridge);
+    if (!bridge || !transactions) {
         logger.debug(`Not found ${reqInfo}`)
         res.sendStatus(404);
                 return;
     }
-    if (result) {
+    if (bridge && transactions) {
         logger.debug(`Completed ${reqInfo}`)
         res.status(200).json({
-            result
+            bridge,
+            transactions,
         })
     }
 }
@@ -148,8 +155,8 @@ async function fetchTransactions(req, res) {
         ],
         include: [
             {
-              model: db.instances,
-              as: 'instance',              
+              model: db.bridges,
+              as: 'bridge',              
             },
           ],
     })
@@ -192,7 +199,7 @@ async function assign(req, res) {
         res.sendStatus(500);
     }
     
-    const instance = await db.instances.findOne({
+    const bridge = await db.bridges.findOne({
         where: {
             uuid: req.body.uuid,
         },
@@ -204,9 +211,9 @@ async function assign(req, res) {
             },
           ],
     });
-    //console.log(instance);
+    //console.log(bridge);
 
-    if (instance) {
+    if (bridge) {
         console.log('found bridge');        
     } else {
         console.log('unable to find bridge');
@@ -217,18 +224,18 @@ async function assign(req, res) {
 
     //console.log(req.body);
     console.log(req.body.txid.length);
-    console.log(instance.type );
-    console.log(instance.transactions);
+    console.log(bridge.type );
+    console.log(bridge.transactions);
     console.log(ethers.utils.isHexString(req.body.txid) );
     console.log(req.body.txid.length);
-    console.log(instance.transactions.length);
+    console.log(bridge.transactions.length);
     
 
     if 
     (
-        instance 
-        && instance.type === 1 
-        && instance.transactions.length < 1 
+        bridge 
+        && bridge.type === 1 
+        && bridge.transactions.length < 1 
         && ethers.utils.isHexString(req.body.txid) 
         && req.body.txid.length === 66
     ) 
@@ -239,18 +246,18 @@ async function assign(req, res) {
             if (
                 await bsc.isValidBurnTx(
                     req.body.txid, 
-                    instance.depositAddress, 
-                    instance.amount, 
-                    instance.time
+                    bridge.depositAddress, 
+                    bridge.amount, 
+                    bridge.time
                 ) 
                 && await bsc.isNewTx(req.body.txid)
                 ) 
                 {
                     console.log('insert new transaction');
                     const newTransaction = await db.transactions.create({
-                    instanceId: instance.id,
+                    bridgeId: bridge.id,
                     bsc_tx: req.body.txid,
-                    amount: instance.amount,
+                    amount: bridge.amount,
                     });
                     console.log(newTransaction);
                     if (newTransaction) {
@@ -315,7 +322,7 @@ async function create(req, res) {
     }
 
     if (type === 0 ) { // destination already exist
-        const existDestination = await db.instances.findOne({
+        const existDestination = await db.bridges.findOne({
             where: {
                 address:  req.body.destinationAddress, //destination address
             },
@@ -401,7 +408,7 @@ async function create(req, res) {
     await db.sequelize.transaction({
         isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
       }, async (t) => {
-        const activity = await db.instances.create({
+        const activity = await db.bridges.create({
             uuid: newUUID,
             amount: amount.toFixed(8),
             address: req.body.destinationAddress,

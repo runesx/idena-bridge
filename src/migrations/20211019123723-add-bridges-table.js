@@ -1,16 +1,21 @@
 module.exports = {
   up: async (queryInterface, DataTypes) => {
-    await queryInterface.createTable('instances', {
+    await queryInterface.createTable('bridges', {
       id: {
         type: DataTypes.BIGINT,
         allowNull: false,
         primaryKey: true,
         autoIncrement: true,
       },
+      blockchain: {
+        type: DataTypes.STRING(6),
+        allowNull: false,
+        defaultValue: 'BSC'
+      },
       address: {
         type: DataTypes.STRING(42),
         allowNull: true,
-      },
+      },      
       depositAddress: {
         type: DataTypes.STRING(42),
         allowNull: true,
@@ -61,6 +66,6 @@ module.exports = {
     });
   },
   down: async (queryInterface, DataTypes) => {
-    await queryInterface.dropTable('instances');
+    await queryInterface.dropTable('bridges');
   },
 };

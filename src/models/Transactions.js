@@ -54,7 +54,7 @@ module.exports = (sequelize, DataTypes) => {
     const TransactionModel = sequelize.define('transactions', modelDefinition, modelOptions);
   
     TransactionModel.associate = (model) => {
-        TransactionModel.belongsTo(model.instances);
+        TransactionModel.belongsTo(model.bridges);
     };
   
     return TransactionModel;

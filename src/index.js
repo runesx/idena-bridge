@@ -134,7 +134,7 @@ async function checkSwaps() {
         isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
       }, async (t) => {
           console.log('checkswaps');
-        const pending = await db.instances.findAll({
+        const pending = await db.bridges.findAll({
             where: {
               status: 'pending',
               type: 1,
@@ -181,13 +181,13 @@ async function patchRunebaseTransactions() {
             if (transaction.category === "receive") {
                 if (transaction.address) {
                     //console.log(transaction);
-                    const instance = await db.instances.findOne({
+                    const bridge = await db.bridges.findOne({
                         where: {
                             depositAddress: transaction.address,
                             status: 'pending',
                         },               
                     });                
-                    if (!instance) {
+                    if (!bridge) {
                         //console.log('not found');
                     } else {
                         const dbTransaction = await db.transactions.findOne({
@@ -196,8 +196,8 @@ async function patchRunebaseTransactions() {
                             },
                             include: [
                                 {
-                                  model: db.instances,
-                                  as: 'instance',
+                                  model: db.bridges,
+                                  as: 'bridge',
                                 },
                               ],
                         });
@@ -210,7 +210,7 @@ async function patchRunebaseTransactions() {
                                     confirmations: transaction.confirmations,
                                     amount: transaction.amount * 1e8,
                                     collectedRunebaseFee: parseInt(process.env.RUNEBASE_FIXED_FEE),
-                                    instanceId: instance.id,
+                                    bridgeId: bridge.id,
                                     from: transaction.from,
                                 });
                             }                            
@@ -219,7 +219,7 @@ async function patchRunebaseTransactions() {
                             let {
                                 hash,
                                 fees
-                            } = await bsc.mint(dbTransaction.instance.address, (dbTransaction.amount / 1e8));
+                            } = await bsc.mint(dbTransaction.bridge.address, (dbTransaction.amount / 1e8));
                             if (!hash) {
                                 logger.log("Unable to mint bsc coins");
                                 logger.error("Unable to mint bsc coins");
