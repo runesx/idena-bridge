@@ -1,8 +1,6 @@
 const express = require('express'),
     router = express.Router();
 const uuid = require('uuid');
-const idena = require('../idena');
-const { Rweb3 } = require('rweb3');
 const db = require('../models');
     const { Sequelize, Transaction, Op } = require('sequelize');
     import walletNotify from '../controllers/walletNotify';
@@ -15,8 +13,14 @@ const {
 } = require('ethers');
 const logger = require('../logger').child({
     component: "api"
-})
-const rweb3 = new Rweb3('http://runebaseinfo:runebaseinfo@localhost:9432');
+});
+const {
+    startRunebaseEnv,
+    waitRunebaseNodeSync,
+    getNewAddress,
+    isRunebaseAddress,
+    isRunebaseConnected,
+} = require('../runebase/calls');
 const BigNumber = require('bignumber.js');
 
 router.post('/api/rpc/walletnotify',
@@ -280,23 +284,20 @@ router.post('/create', async function (req, res) {
     }
 });
 
-async function isConnected() {
-    return await rweb3.isConnected();
-  }
-  async function isRunebaseAddress(address) {
-    return await rweb3.utils.isRunebaseAddress(address);
-  }
-  async function getNewAddress() {
-    return await rweb3.getNewAddress();
-  }
+
+
+
 
 async function create(req, res) {
-    const isItConnected = await isConnected();
+    const isItConnected = await isRunebaseConnected();
+    console.log(isItConnected);
     if(!isItConnected) {
-        logger.debug(`Unable to connect to Runebase Node`)
+        console.log(`Unable to connect to Runebase Node`);
+        logger.debug(`Unable to connect to Runebase Node`);
         res.sendStatus(400);
         return;
     }
+    console.log('after is it connected');
     const reqInfo = `${req.path} (type=${req.body.type}, address=${req.body.destinationAddress})`;
     console.log(reqInfo);
     logger.debug(`Got ${reqInfo}`);

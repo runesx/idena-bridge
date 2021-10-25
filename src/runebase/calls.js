@@ -23,8 +23,12 @@ export const listUnspent = async () => {
 }
 
 export const sendToAddress = async (address, amount, comment = '', commentTo = '', subtractFeeFromAmount = false) => {
+    console.log('senttoaddress;')
+    console.log(address);
+    console.log(amount);
     
     const unspent = await getInstance().sendToAddress(address, amount, comment, commentTo, subtractFeeFromAmount);
+    console.log(unspent);
     return unspent;
 }
 
@@ -47,4 +51,14 @@ export const waitRunebaseNodeSync = async () => {
 export const listTransactions = async (number) => {
     const transactions = await getInstance().listTransactions(number);
     return transactions;
+}
+
+export const isRunebaseAddress = async () => {
+    const address = await getInstance().isRunebaseAddress(address);
+    return address;
+}
+
+export const getNewAddress = async () => {
+    const address = await getInstance().getNewAddress();
+    return address;
 }

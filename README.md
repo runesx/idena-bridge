@@ -1,4 +1,17 @@
-# idenaBridge
+# wRUNES Bridge
+
+### Runebase Node
+```
+//start runebase node
+
+bin/runebased --datadir=/home/app/aarunebase
+
+//stop runebase node
+
+//copy runebase.conf
+
+bin/runebased --datadir=/home/app/aarunebase
+```
 
 ### installation 
 create .env file and fill these values

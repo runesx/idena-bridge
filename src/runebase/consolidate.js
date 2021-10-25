@@ -6,7 +6,7 @@ const { construct, broadcast } = require("./cutxo");
 
 export const consolidate = async () => {    
     const client = new Client({
-        port: 9432,
+        port: 9532,
         username: process.env.RPC_USER,
         password: process.env.RPC_PASS,
     });

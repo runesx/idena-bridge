@@ -29,10 +29,9 @@ const BigNumber = require('bignumber.js');
 
 async function handleBscToRunebaseSwap(swap, logger) {
     console.log('handleBscToRunebaseSwap');
-    console.log('swap amount');   
-    console.log(swap.amount); 
     
     const parsedAmount = Number(new BigNumber(swap.amount).div(1e8).times(1e18));
+    const sendAmount = Number(new BigNumber(swap.amount).div(1e8))
     console.log(parsedAmount);
     
 
@@ -67,11 +66,14 @@ async function handleBscToRunebaseSwap(swap, logger) {
     }
     console.log('handleBscToRunebaseSwap 2');
     if (!await bsc.isTxConfirmed(swap.transactions[0].bsc_tx)) {
+        console.log('faiil');
         return;
     }
-    console.log('before sending');    
+    console.log('before sending');   
+    console.log(sendAmount); 
+    console.log(swap.address);
 
-    const hash = await sendToAddress(swap.address, parsedAmount);
+    const hash = await sendToAddress(swap.address, sendAmount);
     console.log(hash);
  
     if (!hash) {
