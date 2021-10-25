@@ -16,15 +16,27 @@ const {
     listUnspent,
     sendToAddress,
 } = require('./runebase/calls');
+const {
+    formatUnits,
+    parseUnits,    
+} = require("@ethersproject/units");
 
 const {
     consolidate,
 } = require('./runebase/consolidate');
+const BigNumber = require('bignumber.js');
 
 
 async function handleBscToRunebaseSwap(swap, logger) {
     console.log('handleBscToRunebaseSwap');
-    if (!await bsc.isValidBurnTx(swap.transactions[0].bsc_tx, swap.depositAddress, swap.amount, swap.time)) {
+    console.log('swap amount');   
+    console.log(swap.amount); 
+    
+    const parsedAmount = Number(new BigNumber(swap.amount).div(1e8).times(1e18));
+    console.log(parsedAmount);
+    
+
+    if (!await bsc.isValidBurnTx(swap.transactions[0].bsc_tx, swap.depositAddress, parsedAmount, swap.time)) {
         // not valid
         logger.info("BSC tx is invalid");
         console.log("BSC tx is invalid");
@@ -57,19 +69,9 @@ async function handleBscToRunebaseSwap(swap, logger) {
     if (!await bsc.isTxConfirmed(swap.transactions[0].bsc_tx)) {
         return;
     }
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    console.log('before sending');
-    
+    console.log('before sending');    
 
-    const hash = await sendToAddress(swap.address, swap.amount);
+    const hash = await sendToAddress(swap.address, parsedAmount);
     console.log(hash);
  
     if (!hash) {
@@ -103,15 +105,25 @@ async function handleBscToRunebaseSwap(swap, logger) {
 }
 
 async function handleSwap(swap, logger) {
-    console.log('swap')
-    if (swap.type === 1 && swap.transactions[0].bsc_tx) {
+    console.log('swap');
+    let date = new Date(swap.time);
+    date.setDate(date.getDate() + 1);
+    console.log('handleswap');
+    console.log(swap.type);
+    console.log(swap.transactions);
+    console.log(swap.time);
+    console.log(date);
+    console.log(Date.now());
+    if (swap.type === 1 && swap.transactions[0].bsc_tx && date > Date.now()) {
         console.log('WRUNES TO RUNES');
         await handleBscToRunebaseSwap(swap, logger)
         return
     }
+    console.log('fail');
+    console.log(swap.type);
+    console.log(swap.transactions[0].bsc_tx);
 
-    let date = new Date(swap.time);
-    date.setDate(date.getDate() + 1);
+    
     if (date < Date.now()) {
         logger.info("Swap is outdated");
         await swap.update({
@@ -168,11 +180,7 @@ async function checkSwaps() {
       });
 }
 
-async function loopCheckSwaps() {
-    //console.log('loopcheckswapsstart');
-    await checkSwaps();
-    setTimeout(loopCheckSwaps, parseInt(process.env.CHECKING_DELAY));
-}
+
 
 async function patchRunebaseTransactions() {
     const transactions = await listTransactions(100);
@@ -203,12 +211,14 @@ async function patchRunebaseTransactions() {
                         });
                         
                         if (!dbTransaction) {
-                            if (transaction.amount > 3) {
+                            if (transaction.amount > 100) {
+                                const amounte = new BigNumber(transaction.amount).times(1e8);
+
                                 //console.log(transaction);
                                 const newTransaction = await db.transactions.create({
                                     runebase_tx: transaction.txid,
                                     confirmations: transaction.confirmations,
-                                    amount: transaction.amount * 1e8,
+                                    amount: Math.trunc(amounte),
                                     collectedRunebaseFee: parseInt(process.env.RUNEBASE_FIXED_FEE),
                                     bridgeId: bridge.id,
                                     from: transaction.from,
@@ -288,6 +298,12 @@ async function loopConsolidateRunebase() {
     //console.log('loopcheckswapsstart');
     await consolidateRunebase();
     setTimeout(loopConsolidateRunebase, parseInt(process.env.CHECKING_DELAY));
+}
+
+async function loopCheckSwaps() {
+    //console.log('loopcheckswapsstart');
+    await checkSwaps();
+    setTimeout(loopCheckSwaps, parseInt(process.env.CHECKING_DELAY));
 }
 
 app.use(cors())

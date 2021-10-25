@@ -21,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       amount: {
-        type: DataTypes.DECIMAL(36, 18),
+        type: DataTypes.BIGINT,
         allowNull: true,
       },
       fees: {

@@ -3,8 +3,10 @@
   "version": "0.0.1",
   "description": "Bridge for RUNES <-> wRUNES",
   "dependencies": {
+    "@ethersproject/units": "^5.5.0",
     "abi-decoder": "^2.4.0",
     "axios": "^0.21.1",
+    "bignumber.js": "^9.0.1",
     "bitcoin-core": "^3.0.0",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",

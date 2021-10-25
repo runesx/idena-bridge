@@ -17,6 +17,7 @@ const logger = require('../logger').child({
     component: "api"
 })
 const rweb3 = new Rweb3('http://runebaseinfo:runebaseinfo@localhost:9432');
+const BigNumber = require('bignumber.js');
 
 router.post('/api/rpc/walletnotify',
     walletNotify,
@@ -75,7 +76,7 @@ async function latest(req, res) {
 }
 
 router.get('/info/:uuid', async function (req, res) {
-    console.log(req);
+    //console.log(req);
     try {
         await info(req, res)
     } catch (error) {
@@ -88,7 +89,7 @@ async function info(req, res) {
     const reqInfo = req.path
     logger.debug(`Got ${reqInfo}`);
     console.log('infocalled');
-    console.log(req.params);
+    //console.log(req.params);
     if (!uuid.validate(req.params.uuid)) {
         logger.debug(`Bad request ${reqInfo}`)
         res.sendStatus(400);
@@ -129,16 +130,7 @@ async function info(req, res) {
     }
 }
 
-router.get('/transactions', async function (req, res) {
-    console.log('get transactions...');
-    console.log('get transactions...');
-    console.log('get transactions...');
-    console.log('get transactions...');
-    console.log('get transactions...');
-    console.log('get transactions...');
-    console.log('get transactions...');
-    console.log('get transactions...');
-    
+router.get('/transactions', async function (req, res) {    
     try {
         await fetchTransactions(req, res)
     } catch (error) {
@@ -148,7 +140,6 @@ router.get('/transactions', async function (req, res) {
 });
 
 async function fetchTransactions(req, res) {
-
     const result = await db.transactions.findAll({
         order: [
             ['id', 'DESC'],
@@ -243,11 +234,13 @@ async function assign(req, res) {
         console.log('888');
         if (await bsc.isTxExist(req.body.txid)) {
             console.log('999');
+            const actualAmount = new BigNumber(bridge.amount).div(1e8).times(1e18);
+            console.log(actualAmount);
             if (
                 await bsc.isValidBurnTx(
                     req.body.txid, 
                     bridge.depositAddress, 
-                    bridge.amount, 
+                    actualAmount, 
                     bridge.time
                 ) 
                 && await bsc.isNewTx(req.body.txid)
@@ -402,15 +395,20 @@ async function create(req, res) {
     }
 
     console.log(req.body);
+    
 
     console.log('insert swap');
+    const amounte = new BigNumber(amount).times(1e8);
+    console.log(Number(amounte.toFixed(0)));
+    console.log(Math.trunc(amounte));
     let newUUID = uuid.v4();
     await db.sequelize.transaction({
         isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
       }, async (t) => {
+          //console.log(parseUnits(amount, 18));
         const activity = await db.bridges.create({
             uuid: newUUID,
-            amount: amount.toFixed(8),
+            amount: Math.trunc(amounte),
             address: req.body.destinationAddress,
             depositAddress: type === 0 && RunebaseAddress ? RunebaseAddress : req.body.address,
             type,
@@ -418,6 +416,7 @@ async function create(req, res) {
             transaction: t,
             lock: t.LOCK.UPDATE,
           });
+          console.log(activity);
         t.afterCommit(() => {
             logger.debug(`Completed ${reqInfo}: ${newUUID}`)
             res.status(200).json({
