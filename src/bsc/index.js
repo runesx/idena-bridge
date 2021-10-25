@@ -101,8 +101,16 @@ exports.isValidBurnTx = async function (txHash, address, amount, date) {
             console.log(`Wrong method, actual: ${method}, expected: Transfer`);
             return false
         }
-        const value = contract.interface.parseLog(txReceipt.logs[0]).args.value
-        if (!(value >= ethers.utils.parseEther(amount.toString()))) {
+        const value = contract.interface.parseLog(txReceipt.logs[0]).args.value;
+        console.log('value');
+        console.log(value);
+        console.log(amount);
+        console.log(ethers.utils.parseEther(amount.toString()));
+        console.log('numbemr Values');
+        console.log(Number(value));
+        console.log(Number(amount));
+        //console.log(Number(ethers.utils.parseEther(amount.toString())));
+        if (!(value >= amount)) {
             logger.info(`Wrong value, actual: ${value}, expected: at least ${amount}`);
             console.log(`Wrong value, actual: ${value}, expected: at least ${amount}`);
             return false

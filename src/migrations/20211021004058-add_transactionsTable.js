@@ -57,3 +57,5 @@ module.exports = {
     await queryInterface.dropTable('transactions');
   },
 };
+9223372036854775807
+750000000000000000000
