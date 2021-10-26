@@ -25,6 +25,8 @@ const {
     consolidate,
 } = require('./runebase/consolidate');
 const BigNumber = require('bignumber.js');
+const { createServer } = require("http");
+const { Server } = require("socket.io");
 
 
 async function handleBscToRunebaseSwap(swap, logger) {
@@ -312,6 +314,9 @@ async function loopCheckSwaps() {
 app.use(cors())
 app.use(bodyParser.json());
 app.use('/', swaps);
+const httpServer = createServer(app);
+const io = new Server(httpServer, { /* options */ });
+io.on('connection', () => { /* … */ });
 
 async function start() {
     await startRunebaseEnv();
@@ -320,7 +325,7 @@ async function start() {
     loopRunebaseTransactions();
     loopConsolidateRunebase();
     const port = 8000;
-    app.listen(port, () => console.log(`Server started, listening on port: ${port}`));
+    httpServer.listen(port, () => console.log(`Server started, listening on port: ${port}`));
 }
 
 start()
