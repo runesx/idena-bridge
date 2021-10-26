@@ -4,13 +4,13 @@
 ```
 //start runebase node
 
-bin/runebased --datadir=/home/app/aarunebase
+bin/runebased --datadir=/home/app/bridgeRunebaseDate &
 
 //stop runebase node
 
 //copy runebase.conf
 
-bin/runebased --datadir=/home/app/aarunebase
+bin/runebased --datadir=/home/app/bridgeRunebaseDate
 ```
 
 ### installation 

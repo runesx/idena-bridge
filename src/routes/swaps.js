@@ -219,7 +219,7 @@ async function assign(req, res) {
 
     //console.log(req.body);
     console.log(req.body.txid.length);
-    console.log(bridge.type );
+    console.log(bridge.type);
     console.log(bridge.transactions);
     console.log(ethers.utils.isHexString(req.body.txid) );
     console.log(req.body.txid.length);
