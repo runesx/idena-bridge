@@ -116,6 +116,7 @@ async function handleSwap(swap, logger) {
     console.log(swap.time);
     console.log(date);
     console.log(Date.now());
+    
     if (swap.type === 1 && swap.transactions[0].bsc_tx && date > Date.now()) {
         console.log('WRUNES TO RUNES');
         await handleBscToRunebaseSwap(swap, logger)
@@ -213,7 +214,7 @@ async function patchRunebaseTransactions() {
                         });
                         
                         if (!dbTransaction) {
-                            if (transaction.amount > 100) {
+                            if (transaction.amount > Number(process.env.RUNEBASE_MIN_SWAP)) {
                                 const amounte = new BigNumber(transaction.amount).times(1e8);
 
                                 //console.log(transaction);
