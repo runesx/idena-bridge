@@ -9,6 +9,7 @@ const express = require('express'),
     const { Sequelize, Transaction, Op } = require('sequelize');
 const logger = require('./logger').child({component: "processing"})
 const swaps = require('./routes/swaps');
+var moment = require('moment');
 const {
     startRunebaseEnv,
     waitRunebaseNodeSync,
@@ -116,10 +117,12 @@ async function handleSwap(swap, logger) {
     console.log(swap.type);
     console.log(swap.transactions);
     console.log(swap.time);
+    console.log('moment')
     console.log(date);
-    console.log(Date.now());
+    console.log(moment(Date.now()).unix());
+    //console.log(Date.now());
     
-    if (swap.type === 1 && swap.transactions[0].bsc_tx && date > Date.now()) {
+    if (swap.type === 1 && swap.transactions[0].bsc_tx && moment(date).unix() > moment(Date.now()).unix()) {
         console.log('WRUNES TO RUNES');
         await handleBscToRunebaseSwap(swap, logger)
         return
