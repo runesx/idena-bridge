@@ -53,9 +53,9 @@ export const listTransactions = async (number) => {
     return transactions;
 }
 
-export const isRunebaseAddress = async () => {
-    const address = await getInstance().isRunebaseAddress(address);
-    return address;
+export const isRunebaseAddress = async (address) => {
+    const addressX = await getInstance().isRunebaseAddress(address);
+    return addressX;
 }
 
 export const getNewAddress = async () => {
