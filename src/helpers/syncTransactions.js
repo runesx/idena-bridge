@@ -15,8 +15,6 @@ const {
 } = require('../runebase/calls');
 
 async function handleBscToRunebaseSwap(swap, logger, sockets) {
-  console.log('handleBscToRunebaseSwap');
-
   const parsedAmount = Number(new BigNumber(swap.amount).div(1e8).times(1e18));
   const sendAmount = Number(new BigNumber(swap.amount).div(1e8));
   console.log(parsedAmount);
@@ -50,15 +48,11 @@ async function handleBscToRunebaseSwap(swap, logger, sockets) {
       fail_reason: 'Not Valid',
     });
   }
-  console.log('handleBscToRunebaseSwap 2');
+
   if (!await bsc.isTxConfirmed(swap.transactions[0].bsc_tx, swap.chainId)) {
     console.log('faiil');
     return;
   }
-  console.log('before sending');
-  console.log(sendAmount);
-  console.log(swap.address);
-
   const hash = await sendToAddress(swap.address, sendAmount);
   console.log(hash);
 
@@ -83,7 +77,6 @@ async function handleBscToRunebaseSwap(swap, logger, sockets) {
     status: 'Success',
     mined: 1,
   });
-  console.log(updateswap);
 
   const finalizeTransaction = await swap.transaction[0].update({
     minted: true,
@@ -111,22 +104,22 @@ async function handleBscToRunebaseSwap(swap, logger, sockets) {
     ],
   });
 
+  console.log('emit2');
+
   if (sockets[updatedBridge.uuid]) {
     sockets[updatedBridge.uuid].emit('updateBridge', {
       bridge: updatedBridge,
       transactions: updatedTransactions,
     });
   }
-  console.log(finalizeTransaction);
+  // console.log(finalizeTransaction);
 }
 
 async function handleSwap(swap, logger, sockets) {
-  console.log('swap');
   const date = new Date(swap.time);
   date.setDate(date.getDate() + 1);
 
   if (swap.type === 1 && swap.transactions[0].bsc_tx && moment(date).unix() > moment(Date.now()).unix()) {
-    console.log('WRUNES TO RUNES');
     await handleBscToRunebaseSwap(swap, logger, sockets);
     return;
   }
@@ -152,7 +145,6 @@ export async function checkSwaps(io, sockets) {
   await db.sequelize.transaction({
     isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
   }, async (t) => {
-    console.log('checkswaps');
     const pending = await db.bridges.findAll({
       where: {
         status: 'pending',
@@ -171,7 +163,6 @@ export async function checkSwaps(io, sockets) {
     for (const swap of pending) {
       const swapLogger = logger.child({ swapId: swap.uuid });
       try {
-        console.log('before handleswap');
         await handleSwap(swap, swapLogger, sockets);
       } catch (error) {
         swapLogger.error(`Failed to handle swap: ${error}`);
@@ -250,7 +241,7 @@ export async function patchRunebaseTransactions(io, sockets) {
                     },
                   ],
                 });
-
+                console.log('emit3');
                 if (sockets[updatedBridge.uuid]) {
                   sockets[updatedBridge.uuid].emit('updateBridge', {
                     bridge: updatedBridge,
@@ -317,7 +308,7 @@ export async function patchRunebaseTransactions(io, sockets) {
                       },
                     ],
                   });
-
+                  console.log('emit6');
                   if (sockets[updatedBridge.uuid]) {
                     sockets[updatedBridge.uuid].emit('updateBridge', {
                       bridge: updatedBridge,
@@ -345,23 +336,26 @@ export async function patchRunebaseTransactions(io, sockets) {
                   id: dbTransaction.bridgeId,
                 },
               });
-              const updatedTransactions = await db.transactions.findAll({
-                order: [
-                  ['id', 'DESC'],
-                ],
-                include: [
-                  {
-                    where: {
-                      id: dbTransaction.bridgeId,
-                    },
-                    model: db.bridges,
-                    as: 'bridge',
-                    required: true,
-                  },
-                ],
-              });
-
+              console.log('emit1');
+              console.log(sockets[updatedBridge.uuid]);
               if (sockets[updatedBridge.uuid]) {
+                console.log('inside emitter');
+                const updatedTransactions = await db.transactions.findAll({
+                  order: [
+                    ['id', 'DESC'],
+                  ],
+                  include: [
+                    {
+                      where: {
+                        id: dbTransaction.bridgeId,
+                      },
+                      model: db.bridges,
+                      as: 'bridge',
+                      required: true,
+                    },
+                  ],
+                });
+                console.log('before emitting');
                 sockets[updatedBridge.uuid].emit('updateBridge', {
                   bridge: updatedBridge,
                   transactions: updatedTransactions,

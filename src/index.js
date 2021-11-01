@@ -38,11 +38,11 @@ const ioSocket = io(httpServer, {
 const sockets = {};
 
 ioSocket.on("connection", async (socket) => {
-  if (socket.handshake.query.CustomId) {
-    sockets[socket.handshake.query.CustomId] = socket;
+  if (socket.handshake.query.customId) {
+    sockets[socket.handshake.query.customId] = socket;
   }
   socket.on("disconnect", () => {
-    delete sockets[socket.handshake.query.CustomId];
+    delete sockets[socket.handshake.query.customId];
     console.log("Client disconnected");
   });
 });
