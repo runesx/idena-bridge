@@ -391,7 +391,9 @@ const router = (app, io) => {
       return;
     }
 
-    if (!isRunebaseAddress(req.body.destinationAddress) && type === 1) {
+    console.log('beforeisrunebaseaddress');
+
+    if (type === 1 && !isRunebaseAddress(req.body.destinationAddress)) {
       console.log(`Invalid Runebase Address ${reqInfo}`);
       logger.debug(`Invalid Runebase Address ${reqInfo}`);
       res.status(500).send({
@@ -399,6 +401,8 @@ const router = (app, io) => {
       });
       return;
     }
+
+    console.log('afterisrunebaseaddress');
 
     if (!utils.isAddress(req.body.destinationAddress) && type === 0) {
       console.log(`Invalid BSC/MATIC Address ${reqInfo}`);

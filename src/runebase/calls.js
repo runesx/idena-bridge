@@ -52,19 +52,13 @@ export const listTransactions = async (number) => {
 
 export const isRunebaseAddress = async (address) => {
   console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
-  console.log('address');
   console.log(address);
-  const addressX = await getInstance().isRunebaseAddress(address);
-  return addressX;
+  try {
+    const addressX = await getInstance().isRunebaseAddress(address);
+    return addressX;
+  } catch (e) {
+    console.log(e);
+  }
 };
 
 export const getNewAddress = async () => {
