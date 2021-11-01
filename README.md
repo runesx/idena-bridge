@@ -2,9 +2,13 @@
 
 ### Runebase Node
 ```
+testnet
+bin/runebased --datadir=/home/app/aarunebase
+
 //start runebase node
 
 bin/runebased --datadir=/home/app/bridgeRunebaseDate &
+runebase/src/runebased --datadir=/home/bago/bridgeRunebaseData &
 
 //stop runebase node
 
