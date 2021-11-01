@@ -311,6 +311,16 @@ const router = (app, io) => {
   async function create(req, res) {
     const isItConnected = await isRunebaseConnected();
     console.log(isItConnected);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
+    console.log(req.body);
 
     if (!isItConnected) {
       console.log(`Unable to connect to Runebase Node`);
