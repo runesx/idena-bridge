@@ -134,7 +134,7 @@ exports.isValidBurnTx = async function (txHash, address, amount, date, network) 
     console.log('value');
     console.log(value);
     console.log(amount);
-    console.log(ethers.utils.parseEther(amount.toString()));
+    // console.log(ethers.utils.parseEther(amount.toString()));
     console.log('numbemr Values');
     console.log(Number(value));
     console.log(Number(amount));
@@ -144,20 +144,24 @@ exports.isValidBurnTx = async function (txHash, address, amount, date, network) 
       console.log(`Wrong value, actual: ${value}, expected: at least ${amount}`);
       return false;
     }
+    console.log('321');
     const { from } = contract.interface.parseLog(txReceipt.logs[0]).args;
     if (from.toLowerCase() !== tx.from.toLowerCase()) {
       logger.info(`Wrong sender, actual: ${from}, expected: ${tx.from}`);
       console.log(`Wrong sender, actual: ${from}, expected: ${tx.from}`);
       return false;
     }
+    console.log('321-1');
     const { to } = contract.interface.parseLog(txReceipt.logs[0]).args;
     if (to.toLowerCase() !== "0x0000000000000000000000000000000000000000") {
       logger.info(`Wrong recipient, actual: ${to}, expected: 0x0000000000000000000000000000000000000000`);
       console.log(`Wrong recipient, actual: ${to}, expected: 0x0000000000000000000000000000000000000000`);
       return false;
     }
+    console.log('323');
     const block = await provider.getBlock(tx.blockHash);
     const blockDate = new Date(block.timestamp * 1000);
+    console.log('3666');
     if (blockDate.getTime() < date.getTime()) {
       logger.info("Tx is not actual");
       console.log("Tx is not actual");
