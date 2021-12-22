@@ -4,9 +4,9 @@ const Client = require("bitcoin-core");
 
 const { construct, broadcast } = require("./cutxo");
 
-export const consolidate = async () => {    
+export const consolidate = async () => {
     const client = new Client({
-        port: 9532,
+        port: 9432,
         username: process.env.RPC_USER,
         password: process.env.RPC_PASS,
     });
@@ -17,7 +17,7 @@ export const consolidate = async () => {
         return;
     }
     let tx;
-        
+
     try {
         tx = await construct({
             client,
@@ -45,6 +45,6 @@ export const consolidate = async () => {
             console.error("Broadcasting transaction error");
             console.error(e.toString());
         }
-    }   
+    }
 };
 
