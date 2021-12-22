@@ -81,7 +81,7 @@ async function start() {
   loopCheckSwaps();
   loopRunebaseTransactions();
   loopConsolidateRunebase();
-  const port = 8000;
+  const port = 8005;
   httpServer.listen(port, () => console.log(`Server started, listening on port: ${port}`));
 }
 
