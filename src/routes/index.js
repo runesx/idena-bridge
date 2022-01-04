@@ -42,6 +42,7 @@ const router = (app, io) => {
         }
         console.log('end insert');
       }
+      res.sendStatus(200);
     }); // IMPORTANT: Make sure this endpoint is only accessible by Runebase Node
 
   async function latest(req, res) {
@@ -128,7 +129,7 @@ const router = (app, io) => {
   }
 
   app.get('/info/:uuid', async (req, res) => {
-  // console.log(req);
+    // console.log(req);
     try {
       await info(req, res);
     } catch (error) {
@@ -224,12 +225,12 @@ const router = (app, io) => {
     console.log('assign checkpoint 3');
 
     if
-    (
+      (
       bridge
-        && bridge.type === 1
-        && bridge.transactions.length < 1
-        && ethers.utils.isHexString(req.body.txid)
-        && req.body.txid.length === 66
+      && bridge.type === 1
+      && bridge.transactions.length < 1
+      && ethers.utils.isHexString(req.body.txid)
+      && req.body.txid.length === 66
     ) {
       console.log('888');
       if (await bsc.isTxExist(req.body.txid, bridge.chainId)) {
@@ -244,7 +245,7 @@ const router = (app, io) => {
             bridge.time,
             bridge.chainId,
           )
-                && await bsc.isNewTx(req.body.txid)
+          && await bsc.isNewTx(req.body.txid)
         ) {
           console.log('insert new transaction');
           const newTransaction = await db.transactions.create({
@@ -287,7 +288,7 @@ const router = (app, io) => {
               bridge: updatedBridge,
               transactions,
             });
-          // res.sendStatus(200);
+            // res.sendStatus(200);
           }
           if (!newTransaction) {
             logger.debug(`Bad request ${reqInfo}`);
@@ -332,7 +333,7 @@ const router = (app, io) => {
     }
     if (
       req.body.chainId !== parseInt(process.env.BSC_NETWORK, 10)
-    && req.body.chainId !== parseInt(process.env.MATIC_NETWORK, 10)
+      && req.body.chainId !== parseInt(process.env.MATIC_NETWORK, 10)
     ) {
       console.log(`Invalid Network`);
       logger.debug(`Invalid Network`);
@@ -446,7 +447,7 @@ const router = (app, io) => {
     await db.sequelize.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.SERIALIZABLE,
     }, async (t) => {
-    // console.log(parseUnits(amount, 18));
+      // console.log(parseUnits(amount, 18));
       const newBridge = await db.bridges.create({
         uuid: newUUID,
         amount: Math.trunc(amounte),
@@ -475,7 +476,7 @@ const router = (app, io) => {
   }
 
   app.post('/create', async (req, res) => {
-  // console.log(req.body);
+    // console.log(req.body);
     try {
       console.log('Create Bridge');
       await create(req, res);
@@ -513,14 +514,14 @@ const router = (app, io) => {
   //    });
   // }
 
-// app.get('/calculateFees/:uuid', async (req, res) => {
-//  try {
-//    await calculateFees(req, res);
-//  } catch (error) {
-//    logger.error(`Failed ${req.path}: ${error}`);
-//    res.sendStatus(500);
-//  }
-// });
+  // app.get('/calculateFees/:uuid', async (req, res) => {
+  //  try {
+  //    await calculateFees(req, res);
+  //  } catch (error) {
+  //    logger.error(`Failed ${req.path}: ${error}`);
+  //    res.sendStatus(500);
+  //  }
+  // });
 };
 
 module.exports = router;
